@@ -1,0 +1,200 @@
+<div class="min-h-screen bg-white">
+  <!-- Toast -->
+  <p-toast></p-toast>
+
+  <!-- Header -->
+  <div class="bg-white border-b border-gray-200 sticky top-0 z-10">
+    <div class="max-w-7xl mx-auto px-4 py-4">
+      <div class="flex items-center justify-between gap-3">
+        <div class="flex items-center gap-3">
+          <button class="p-2 hover:bg-gray-100 rounded-lg transition-colors" (click)="goBack()">
+            <i class="pi pi-arrow-left text-blue-600"></i>
+          </button>
+          <h1 class="text-xl font-bold text-gray-900">
+            {{tareasService.apartadoadmin ? 'Tarea' : 'Tarea N° ' + (tarea?.id || '0')}}
+          </h1>
+        </div>
+        <!-- Navegación rápida -->
+        <div class="flex items-center gap-2">
+          <a [routerLink]="['/admin-tareas/editar-tarea', tarea?.id]" 
+             *ngIf="tarea?.id"
+             class="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors flex items-center gap-2">
+            <i class="pi pi-pencil"></i>
+            <span>Editar</span>
+          </a>
+          <a routerLink="/admin-tareas" class="px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-lg transition-colors flex items-center gap-2">
+            <i class="pi pi-list text-blue-600"></i>
+            <span class="hidden sm:inline">Mis Tareas</span>
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Loading -->
+  <div *ngIf="isLoading" class="flex justify-center items-center py-20">
+    <i class="pi pi-spin pi-spinner text-4xl text-blue-600"></i>
+  </div>
+
+  <div *ngIf="!isLoading" class="max-w-7xl mx-auto px-4 py-6">
+    <!-- Tarjeta de tarea -->
+    <div class="bg-blue-50 border-l-4 border-blue-500 rounded-lg p-4 mb-6">
+      <div class="flex justify-between items-start gap-3">
+        <h2 class="text-base font-semibold text-gray-900 flex-1">
+          {{tarea?.titulo}}
+        </h2>
+        <span class="px-3 py-1 rounded-full text-sm font-medium whitespace-nowrap"
+              [ngClass]="{
+                'bg-yellow-500 text-white': tarea?.estado === 'Pendiente',
+                'bg-blue-500 text-white': tarea?.estado === 'En progreso',
+                'bg-green-500 text-white': tarea?.estado === 'Completada',
+                'bg-gray-400 text-white': tarea?.estado === 'Cerrada'
+              }">
+          {{tarea?.estado || 'Pendiente'}}
+        </span>
+      </div>
+    </div>
+
+    <!-- Descripción -->
+    <div class="mb-6">
+      <h3 class="text-sm font-bold text-gray-700 mb-2">Descripción</h3>
+      <p class="text-sm text-gray-600 leading-relaxed">
+        {{tarea?.descripcion}}
+      </p>
+    </div>
+
+    <!-- Información de la tarea -->
+    <div class="mb-6">
+      <div class="grid grid-cols-2 gap-4 mb-3" *ngIf="!tareasService.apartadoadmin">
+        <div class="flex items-center gap-2 text-sm">
+          <i class="pi pi-tag text-gray-500"></i>
+          <span class="text-gray-600">Categoría:</span>
+          <span class="font-medium text-gray-900">{{tarea?.Categoria || 'Sin categoría'}}</span>
+        </div>
+        <div class="flex items-center gap-2 text-sm">
+          <i class="pi pi-tag text-gray-500"></i>
+          <span class="text-gray-600">SubCategoría:</span>
+          <span class="font-medium text-gray-900">{{tarea?.Categoria || 'Sin categoría'}}</span>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-3 gap-4" *ngIf="tareasService.apartadoadmin">
+        <div class="flex items-center gap-2 text-sm">
+          <i class="pi pi-tag text-gray-500"></i>
+          <span class="text-gray-600">Subcategoría:</span>
+          <span class="font-medium text-gray-900">{{tarea?.Categoria}}</span>
+        </div>
+        <div class="flex items-center gap-2 text-sm">
+          <i class="pi pi-folder text-gray-500"></i>
+          <span class="text-gray-600">Estado:</span>
+          <span class="font-medium text-gray-900">{{tarea?.estado}}</span>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-3 gap-4 mt-3">
+        <div class="flex items-center gap-2 text-sm">
+          <i class="pi pi-clock text-gray-500"></i>
+          <span class="text-gray-600">Programada:</span>
+          <span class="font-medium text-gray-900">{{tarea?.horainicio}}</span>
+        </div>
+        <div class="flex items-center gap-2 text-sm">
+          <i class="pi pi-clock text-gray-500"></i>
+          <span class="text-gray-600">Inicio:</span>
+          <span class="font-medium text-gray-900">{{tarea?.horainicio || 'Sin hora inicio'}}</span>
+        </div>
+        <div class="flex items-center gap-2 text-sm">
+          <i class="pi pi-clock text-gray-500"></i>
+          <span class="text-gray-600">Fin:</span>
+          <span class="font-medium text-gray-900">{{tarea?.horafin || 'Sin hora fin'}}</span>
+        </div>
+      </div>
+
+      <!-- Prioridad -->
+      <div *ngIf="!tareasService.apartadoadmin && tarea?.Prioridad" class="mt-4">
+        <span class="inline-flex items-center gap-2 px-3 py-1 rounded-full text-sm" [ngClass]="getPrioridadColor()">
+          <i class="pi pi-flag-fill"></i>
+          {{tarea?.Prioridad}}
+        </span>
+      </div>
+    </div>
+
+    <!-- Alerta para tareas pendientes -->
+    <div *ngIf="tarea?.estado === 'Pendiente'" class="bg-orange-50 border border-orange-200 rounded-lg p-3 mb-6 flex items-center gap-3">
+      <i class="pi pi-info-circle text-orange-500"></i>
+      <p class="text-sm text-orange-700">Para agregar un comentario o imagen, inicia la tarea.</p>
+    </div>
+
+    <!-- Comentarios -->
+    <div *ngIf="tarea?.estado !== 'Cerrada' && tarea?.estado !== 'Completada'" class="mb-6">
+      <h3 class="text-sm font-bold text-gray-700 mb-2">
+        Agrega un comentario <span class="text-xs text-gray-500">(Opcional)</span>
+      </h3>
+      <textarea 
+        rows="4"
+        class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+        placeholder="Escribe aquí"
+        [(ngModel)]="comentario"
+        [disabled]="tarea?.estado === 'Pendiente'"></textarea>
+    </div>
+
+    <!-- Comentario para tareas cerradas -->
+    <div *ngIf="tarea?.estado === 'Cerrada' || tarea?.id === '1'" class="mb-6">
+      <h3 class="text-sm font-bold text-gray-700 mb-2">
+        Comentario <span class="text-xs text-gray-500">(Opcional)</span>
+      </h3>
+      <div class="bg-gray-50 rounded-lg p-3">
+        <p class="text-sm text-gray-500 italic">No hay comentario.</p>
+      </div>
+    </div>
+
+    <!-- Comentario para tareas completadas -->
+    <div *ngIf="tarea?.estado === 'Completada' && tarea?.id !== '1'" class="mb-6">
+      <h3 class="text-sm font-bold text-gray-700 mb-2">
+        Comentario <span class="text-xs text-gray-500">(Opcional)</span>
+      </h3>
+      <div class="bg-gray-50 rounded-lg p-3">
+        <p class="text-sm text-gray-700">{{comentario}}</p>
+      </div>
+    </div>
+
+    <!-- Botones de acción -->
+    <div class="flex gap-3 mt-6">
+      <button *ngIf="tarea?.estado === 'Pendiente'"
+              class="flex-1 px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
+              (click)="iniciarTarea()">
+        <i class="pi pi-play mr-2"></i>
+        Iniciar Tarea
+      </button>
+
+      <button *ngIf="tarea?.estado === 'En progreso'"
+              class="flex-1 px-4 py-3 bg-yellow-500 text-white rounded-lg hover:bg-yellow-600 transition-colors font-medium"
+              (click)="pausarTarea()">
+        <i class="pi pi-pause mr-2"></i>
+        Pausar Tarea
+      </button>
+
+      <button *ngIf="tarea?.estado === 'En progreso'"
+              class="flex-1 px-4 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium"
+              (click)="completarTarea()">
+        <i class="pi pi-check mr-2"></i>
+        Completar Tarea
+      </button>
+
+      <button *ngIf="tarea?.estado === 'En progreso'"
+              class="px-4 py-3 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+              (click)="adjuntarImagen()">
+        <i class="pi pi-paperclip"></i>
+      </button>
+    </div>
+
+    <!-- Botón de reapertura para tareas completadas -->
+    <div class="flex gap-3 mt-4" *ngIf="tarea?.estado === 'Completada'">
+      <a 
+        class="w-full px-4 py-3 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors font-medium flex items-center justify-center gap-2 cursor-pointer no-underline"
+        [routerLink]="['/admin-tareas/tarea', tarea?.id]">
+        <i class="pi pi-replay"></i>
+        <span>Reabrir Tarea</span>
+      </a>
+    </div>
+  </div> <!-- Cierre del div *ngIf="!isLoading" -->
+</div> <!-- Cierre del div min-h-screen -->

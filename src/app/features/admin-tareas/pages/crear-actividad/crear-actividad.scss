@@ -1,0 +1,89 @@
+.crear-actividad-container {
+  padding: 1.5rem;
+  max-width: 800px;
+  margin: 0 auto;
+
+  .header-section {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin-bottom: 2rem;
+
+    .page-title {
+      margin: 0;
+      font-size: 1.75rem;
+      font-weight: 600;
+      color: var(--text-color);
+    }
+  }
+
+  .form-card {
+    background: var(--surface-card);
+    border-radius: 12px;
+    padding: 2rem;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+
+    .form-group {
+      margin-bottom: 1.5rem;
+
+      label {
+        display: block;
+        margin-bottom: 0.5rem;
+        font-weight: 500;
+        color: var(--text-color);
+
+        &.required-field::after {
+          content: ' *';
+          color: var(--red-500);
+        }
+      }
+
+      .field-hint {
+        display: block;
+        margin-top: 0.25rem;
+        color: var(--text-color-secondary);
+        font-size: 0.875rem;
+      }
+
+      :host ::ng-deep {
+        .p-inputtext,
+        .p-textarea,
+        .p-select,
+        .p-datepicker {
+          width: 100%;
+        }
+
+        .p-select-label {
+          width: 100%;
+        }
+      }
+    }
+
+    .action-buttons {
+      display: flex;
+      gap: 1rem;
+      justify-content: flex-end;
+      margin-top: 2rem;
+      padding-top: 1.5rem;
+      border-top: 1px solid var(--surface-border);
+    }
+  }
+}
+
+@media (max-width: 768px) {
+  .crear-actividad-container {
+    padding: 1rem;
+
+    .form-card {
+      padding: 1.5rem;
+    }
+
+    .action-buttons {
+      flex-direction: column;
+
+      button {
+        width: 100%;
+      }
+    }
+  }
+}

@@ -1,0 +1,75 @@
+<div class="flex flex-col gap-3">
+  <div *ngFor="let tarea of tareas; trackBy: trackByTareaId" 
+       class="bg-white rounded-lg border border-gray-200 p-4 cursor-pointer hover:shadow-md transition-all relative"
+       [style.border-left]="'4px solid ' + getBorderColor(tarea)"
+       (click)="verDetalleTarea(tarea.id)">
+    
+    <!-- Checkbox de selección -->
+    <div class="absolute top-3 right-3">
+      <div class="w-5 h-5 rounded-full border-2 flex items-center justify-center cursor-pointer"
+           [ngClass]="{
+             'bg-green-500 border-green-500': isTareaSeleccionada(tarea.id),
+             'bg-white border-gray-300': !isTareaSeleccionada(tarea.id)
+           }"
+           (click)="onToggleSeleccion(tarea.id, $event)">
+        <i class="pi pi-check text-white text-xs" *ngIf="isTareaSeleccionada(tarea.id)"></i>
+      </div>
+    </div>
+
+    <div class="pr-8">
+      <h3 class="text-sm font-semibold text-gray-900 line-clamp-2 mb-3">
+        {{tarea.titulo}}
+      </h3>
+
+      <div class="flex flex-wrap gap-2 mb-3">
+        <span class="px-2 py-1 rounded-full text-xs font-medium"
+              [ngClass]="{
+                'bg-green-50 text-green-600': tarea.estado === 'Completada',
+                'bg-blue-50 text-blue-600': tarea.estado === 'En progreso',
+                'bg-yellow-50 text-yellow-600': tarea.estado === 'Pendiente',
+                'bg-gray-200 text-gray-700': tarea.estado === 'Cerrada'
+              }">
+          {{tarea.estado}}
+        </span>
+
+        <span class="px-2 py-1 rounded text-xs" 
+              *ngIf="tarea.Prioridad"
+              [ngClass]="getPrioridadColor(tarea.Prioridad)">
+          {{tarea.Prioridad}}
+        </span>
+      </div>
+
+      <div class="flex flex-col gap-2 text-xs text-gray-600">
+        <div class="flex items-center gap-2">
+          <i class="pi pi-tag"></i>
+          <span>{{tarea.Categoria}}</span>
+        </div>
+        
+        <div class="flex items-center gap-2">
+          <i class="pi pi-clock"></i>
+          <span>{{tarea.horainicio}} - {{tarea.horafin}}</span>
+        </div>
+
+        <div class="flex items-center gap-2 mt-1" *ngIf="tarea.totalSubtareas > 0">
+          <i class="pi pi-list"></i>
+          <div class="flex-1">
+            <div class="flex justify-between text-xs mb-1">
+              <span>{{tarea.subtareasCompletadas}}/{{tarea.totalSubtareas}} subtareas</span>
+              <span>{{tarea.progreso}}%</span>
+            </div>
+            <div class="w-full bg-gray-200 rounded-full h-2">
+              <div class="bg-blue-500 h-2 rounded-full transition-all" 
+                   [style.width.%]="tarea.progreso"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div *ngIf="tareas.length === 0" class="text-center py-12 text-gray-500">
+    <i class="pi pi-users text-5xl mb-3 block"></i>
+    <p class="text-sm font-medium">No hay tareas sin asignar</p>
+    <p class="text-xs mt-1">Todas las tareas están asignadas</p>
+  </div>
+</div>

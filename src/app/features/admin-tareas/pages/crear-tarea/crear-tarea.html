@@ -1,0 +1,185 @@
+<div class="min-h-screen bg-gray-50">
+  <!-- Toast para mensajes -->
+  <p-toast></p-toast>
+  
+  <!-- Header -->
+  <div class="bg-white border-b border-gray-200 sticky top-0 z-10">
+    <div class="max-w-7xl mx-auto px-4 py-4">
+      <div class="flex items-center justify-between">
+        <div class="flex items-center gap-3">
+          <button class="p-2 hover:bg-gray-100 rounded-lg transition-colors" (click)="goBack()">
+            <i class="pi pi-arrow-left"></i>
+          </button>
+          <h1 class="text-xl font-bold text-gray-900">{{titulo}}</h1>
+        </div>
+        <button class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                (click)="guardarTarea()">
+          Guardar
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <div class="max-w-4xl mx-auto px-4 py-6">
+    <div class="bg-white rounded-lg p-6 space-y-6">
+      <!-- Nombre de la tarea -->
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-2">
+          Nombre de la tarea *
+        </label>
+        <input 
+          type="text"
+          class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
+          placeholder="Ej. Revisar inventario"
+          [(ngModel)]="nombreTarea">
+      </div>
+
+      <!-- Descripción -->
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-2">
+          Descripción de la tarea
+        </label>
+        <textarea 
+          rows="4"
+          class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
+          placeholder="Escribe aquí..."
+          [(ngModel)]="descripcionTarea"></textarea>
+      </div>
+
+      <!-- Fecha Programada -->
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-2">
+          Fecha Programada *
+        </label>
+        <p-datePicker 
+          [(ngModel)]="fechaProgramada"
+          [showIcon]="true"
+          iconDisplay="input"
+          dateFormat="dd/mm/yy"
+          placeholder="Seleccionar fecha"
+          [minDate]="minDate"
+          class="w-full">
+        </p-datePicker>
+      </div>
+
+      <!-- Tipo de asignación y Cargo -->
+      <div class="grid grid-cols-2 gap-4">
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-2">
+            Tipo de asignación
+          </label>
+          <select 
+            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-gray-900"
+            [(ngModel)]="tipoAsignacion"
+            (change)="onTipoAsignacionChange()">
+            <option value="cargo">Asignar por cargo</option>
+            <option value="usuario">Asignar por usuario</option>
+          </select>
+        </div>
+
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-2">
+            Cargo
+          </label>
+          <select 
+            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-gray-900"
+            [(ngModel)]="cargoSeleccionado">
+            <option value="" disabled class="text-gray-900">Seleccionar cargo</option>
+            <option *ngFor="let cargo of cargosDisponibles" [value]="cargo.nombre">
+              {{cargo.nombre}}
+            </option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Usuario (solo si tipo es usuario) -->
+      <div *ngIf="tipoAsignacion === 'usuario'">
+        <label class="block text-sm font-medium text-gray-700 mb-2">
+          Usuario
+        </label>
+        <select 
+          class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-gray-900"
+          [(ngModel)]="usuario">
+          <option value="" disabled>Seleccionar usuario</option>
+          <option *ngFor="let user of usuariosDisponibles" [value]="user.usuarios_id">
+            Usuario #{{user.usuarios_id}}
+          </option>
+        </select>
+      </div>
+
+      <!-- Actividad -->
+      <div class="bg-blue-50 p-4 rounded-lg border-2 border-blue-300">
+        <label class="block text-sm font-medium text-gray-700 mb-2">
+          🎯 Actividad (opcional)
+        </label>
+        <select 
+          class="w-full px-4 py-2 border-2 border-blue-400 rounded-lg focus:ring-2 focus:ring-blue-500 text-gray-900"
+          [(ngModel)]="actividadSeleccionada">
+          <option [value]="null">Sin actividad</option>
+          <option *ngFor="let act of actividadesDisponibles" [value]="act.actividades_id">
+            {{act.actividades_titulo}}
+          </option>
+        </select>
+        <small class="block mt-1 text-gray-600">
+          Total: {{actividadesDisponibles.length}} actividades disponibles
+        </small>
+      </div>
+
+      <!-- Subcategoría -->
+      <div>
+        <label class="block text-sm font-medium text-gray-700 mb-2 text-gray-900">
+          Categoría
+        </label>
+        <select 
+          class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-gray-900"
+          [(ngModel)]="subcategoria">
+          <option value="" disabled>Seleccionar</option>
+          <option *ngFor="let cat of categoriasDisponibles" [value]="cat.categoria_id">
+            {{cat.categoria_nombre}}
+          </option>
+        </select>
+      </div>
+
+      <!-- Orden y Prioridad -->
+      <div class="grid grid-cols-2 gap-4">
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-2">
+            Orden
+          </label>
+          <input 
+            type="number"
+            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-gray-900"
+            [(ngModel)]="orden"
+            min="1">
+        </div>
+
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-2">
+            Prioridad
+          </label>
+          <select 
+            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-gray-900"
+            [(ngModel)]="prioridad">
+            <option value="baja">Baja</option>
+            <option value="media">Media</option>
+            <option value="alta">Alta</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Estado -->
+      <div class="flex items-center gap-3">
+        <label class="text-sm font-medium text-gray-700">
+          Estado de la tarea:
+        </label>
+        <label class="relative inline-flex items-center cursor-pointer">
+          <input type="checkbox" class="sr-only peer" [(ngModel)]="estadoActivo">
+          <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+          <span class="ml-3 text-sm font-medium" [class.text-green-600]="estadoActivo" [class.text-gray-500]="!estadoActivo">
+            {{estadoActivo ? 'Activo' : 'Inactivo'}}
+          </span>
+        </label>
+      </div>
+    </div>
+  </div>
+</div>

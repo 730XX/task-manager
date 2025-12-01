@@ -1,0 +1,126 @@
+<!-- Toast para mensajes -->
+<p-toast position="top-right"></p-toast>
+
+<div class="login-container">
+    <!-- Lado Izquierdo - Branding -->
+    <div class="login-branding">
+        <div class="branding-content">
+            <div class="logo-wrapper">
+                <div class="logo-icon">
+                    <lucide-icon [img]="icons.CheckSquare" class="h-12 w-12 text-white"></lucide-icon>
+                </div>
+                <h1 class="brand-title">Task Manager Pro</h1>
+            </div>
+
+            <p class="brand-description">
+                Organiza, asigna y completa tareas de manera eficiente.
+                Control total de actividades, asignaciones y productividad.
+            </p>
+
+            <div class="features-list">
+                <div class="feature-item">
+                    <div class="feature-icon">
+                        <lucide-icon [img]="icons.ListTodo" class="h-5 w-5"></lucide-icon>
+                    </div>
+                    <span>Gestión de Tareas</span>
+                </div>
+                <div class="feature-item">
+                    <div class="feature-icon">
+                        <lucide-icon [img]="icons.Users" class="h-5 w-5"></lucide-icon>
+                    </div>
+                    <span>Asignación de Actividades</span>
+                </div>
+                <div class="feature-item">
+                    <div class="feature-icon">
+                        <lucide-icon [img]="icons.BarChart3" class="h-5 w-5"></lucide-icon>
+                    </div>
+                    <span>Seguimiento de Progreso</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Lado Derecho - Formulario de Login -->
+    <div class="login-form-section">
+        <div class="form-container">
+            <!-- Header -->
+            <div class="form-header">
+                <h2 class="form-title">Iniciar Sesión</h2>
+                <p class="form-subtitle">Ingresa tus credenciales para acceder al sistema</p>
+            </div>
+
+            <!-- Formulario -->
+            <form (ngSubmit)="onSubmit()" class="login-form">
+                <!-- Campo Usuario -->
+                <div class="form-group">
+                    <label for="usuario" class="form-label">
+                        <lucide-icon [img]="icons.Mail" class="h-4 w-4 mr-2"></lucide-icon>
+                        Usuario
+                    </label>
+                    <input type="text" id="usuario" name="usuario" [(ngModel)]="usuario" class="input"
+                        placeholder="admin" [disabled]="loading" required />
+                </div>
+
+                <!-- Campo Password -->
+                <div class="form-group">
+                    <label for="password" class="form-label">
+                        <lucide-icon [img]="icons.Lock" class="h-4 w-4 mr-2"></lucide-icon>
+                        Contraseña
+                    </label>
+                    <div class="password-input-wrapper">
+                        <input [type]="showPassword ? 'text' : 'password'" id="password" name="password"
+                            [(ngModel)]="password" class="input" placeholder="••••••" [disabled]="loading" required />
+                        <button type="button" class="password-toggle" (click)="togglePasswordVisibility()"
+                            [disabled]="loading">
+                            <lucide-icon [img]="showPassword ? icons.EyeOff : icons.Eye" class="h-5 w-5"></lucide-icon>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Recordarme y Olvidé Contraseña -->
+                <div class="form-options">
+                    <label class="checkbox-label">
+                        <input type="checkbox" [(ngModel)]="rememberMe" name="rememberMe" class="checkbox"
+                            [disabled]="loading" />
+                        <span>Recordarme</span>
+                    </label>
+                    <a href="#" class="link-text">Olvidé mi contraseña</a>
+                </div>
+
+                <!-- Botón Submit -->
+                <button type="submit" class="btn btn-primary w-full btn-lg" [disabled]="loading || blocked">
+                    <span *ngIf="!loading && !blocked">Iniciar Sesión</span>
+                    <span *ngIf="loading" class="flex items-center justify-center gap-2">
+                        <span class="spinner"></span>
+                        Iniciando sesión...
+                    </span>
+                    <span *ngIf="blocked && !loading">
+                        🔒 Cuenta Bloqueada
+                    </span>
+                </button>
+            </form>
+
+            <!-- Credenciales de Demo -->
+            <div class="demo-credentials">
+                <p class="demo-title">Credenciales de Prueba:</p>
+                <div class="demo-info">
+                    <p><strong>Usuario:</strong> user1</p>
+                    <p><strong>Contraseña:</strong> password123</p>
+                    <p class="text-xs text-gray-500 mt-2">15 tareas asignadas</p>
+                </div>
+                <br>
+                <p class="demo-title">Otros usuarios disponibles:</p>
+                <div class="demo-info">
+                    <p class="text-sm text-gray-600"><strong>user2, user3, user4, user5, user6</strong></p>
+                    <p class="text-xs text-gray-500 mt-1">Contraseña para todos: <strong>password123</strong></p>
+                </div>
+            </div>
+
+            <!-- Footer -->
+            <div class="form-footer">
+                <p>© 2025 Task Manager Pro. Todos los derechos reservados.</p>
+            </div>
+        </div>
+    </div>
+</div>
+

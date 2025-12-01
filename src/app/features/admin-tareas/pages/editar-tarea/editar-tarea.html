@@ -1,0 +1,174 @@
+<div class="min-h-screen bg-gray-50">
+  <!-- Toast -->
+  <p-toast></p-toast>
+  
+  <!-- Header -->
+  <div class="bg-white border-b border-gray-200 sticky top-0 z-10">
+    <div class="max-w-7xl mx-auto px-4 py-4">
+      <div class="flex items-center justify-between gap-3">
+        <div class="flex items-center gap-3">
+          <button class="p-2 hover:bg-gray-100 rounded-lg transition-colors" (click)="goBack()">
+            <i class="pi pi-arrow-left text-blue-600"></i>
+          </button>
+          <h1 class="text-xl font-bold text-gray-900">Editar Tarea</h1>
+        </div>
+        <!-- Navegación rápida -->
+        <div class="flex items-center gap-2">
+          <a routerLink="/admin-tareas" class="px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-lg transition-colors flex items-center gap-2">
+            <i class="pi pi-list text-blue-600"></i>
+            <span class="hidden sm:inline">Mis Tareas</span>
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Loading -->
+  <div *ngIf="isLoading && !titulo" class="flex justify-center items-center py-20">
+    <i class="pi pi-spin pi-spinner text-4xl text-blue-600"></i>
+  </div>
+
+  <!-- Formulario -->
+  <div *ngIf="!isLoading || titulo" class="max-w-3xl mx-auto px-4 py-6">
+    <div class="bg-white rounded-lg shadow-sm p-6">
+      <div class="space-y-5">
+        
+        <!-- Título -->
+        <div>
+          <label class="text-sm font-medium text-gray-700 mb-2 block">
+            Título de la tarea <span class="text-red-500">*</span>
+          </label>
+          <input
+            type="text"
+            [(ngModel)]="titulo"
+            placeholder="Ej: Revisar inventario"
+            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            [class.border-red-500]="titulo && titulo.trim().length < 3" />
+          <p *ngIf="titulo && titulo.trim().length < 3" class="text-xs text-red-500 mt-1">
+            El título debe tener al menos 3 caracteres
+          </p>
+        </div>
+
+        <!-- Descripción -->
+        <div>
+          <label class="text-sm font-medium text-gray-700 mb-2 block">
+            Descripción
+          </label>
+          <textarea
+            [(ngModel)]="descripcion"
+            placeholder="Describe la tarea..."
+            rows="4"
+            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"></textarea>
+        </div>
+
+        <!-- Prioridad -->
+        <div>
+          <label class="text-sm font-medium text-gray-700 mb-2 block">
+            Prioridad <span class="text-red-500">*</span>
+          </label>
+          <p-select
+            [(ngModel)]="prioridad"
+            [options]="prioridades"
+            optionLabel="label"
+            optionValue="value"
+            placeholder="Seleccionar prioridad"
+            styleClass="w-full">
+          </p-select>
+        </div>
+
+        <!-- Fecha programada -->
+        <div>
+          <label class="text-sm font-medium text-gray-700 mb-2 block">
+            Fecha programada <span class="text-red-500">*</span>
+          </label>
+          <p-datepicker
+            [(ngModel)]="fechaProgramada"
+            [showIcon]="true"
+            [showTime]="true"
+            hourFormat="24"
+            dateFormat="dd/mm/yy"
+            placeholder="Seleccionar fecha y hora"
+            styleClass="w-full">
+          </p-datepicker>
+        </div>
+
+        <!-- Categoría -->
+        <div>
+          <label class="text-sm font-medium text-gray-700 mb-2 block">
+            Categoría
+          </label>
+          <p-select
+            [(ngModel)]="categoriaId"
+            [options]="categoriasDisponibles"
+            optionLabel="categoria_nombre"
+            optionValue="categoria_id"
+            placeholder="Seleccionar categoría"
+            [showClear]="true"
+            styleClass="w-full">
+          </p-select>
+        </div>
+
+        <!-- Actividad -->
+        <div>
+          <label class="text-sm font-medium text-gray-700 mb-2 block">
+            Actividad
+          </label>
+          <p-select
+            [(ngModel)]="actividadId"
+            [options]="actividadesDisponibles"
+            optionLabel="actividades_titulo"
+            optionValue="actividades_id"
+            placeholder="Seleccionar actividad"
+            [showClear]="true"
+            styleClass="w-full">
+          </p-select>
+          <p class="text-xs text-gray-500 mt-1">
+            Vincula esta tarea a una actividad (opcional)
+          </p>
+        </div>
+
+        <!-- Usuario asignado -->
+        <div>
+          <label class="text-sm font-medium text-gray-700 mb-2 block">
+            Asignar a
+          </label>
+          <p-select
+            [(ngModel)]="usuarioId"
+            [options]="usuariosDisponibles"
+            optionLabel="usuarios_login_hash"
+            optionValue="usuarios_id"
+            placeholder="Seleccionar usuario"
+            [showClear]="true"
+            styleClass="w-full">
+          </p-select>
+          <p class="text-xs text-gray-500 mt-1">
+            Deja vacío para que quede sin asignar
+          </p>
+        </div>
+
+      </div>
+
+      <!-- Botones de acción -->
+      <div class="flex gap-3 mt-6">
+        <button 
+          class="flex-1 px-4 py-3 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors text-gray-700 font-medium"
+          (click)="goBack()">
+          Cancelar
+        </button>
+        <button 
+          class="flex-1 px-4 py-3 rounded-lg transition-colors font-medium"
+          [class.bg-blue-600]="puedeGuardar && !isLoading"
+          [class.text-white]="puedeGuardar && !isLoading"
+          [class.hover:bg-blue-700]="puedeGuardar && !isLoading"
+          [class.bg-gray-300]="!puedeGuardar || isLoading"
+          [class.text-gray-500]="!puedeGuardar || isLoading"
+          [class.cursor-not-allowed]="!puedeGuardar || isLoading"
+          [disabled]="!puedeGuardar || isLoading"
+          (click)="guardar()">
+          <span *ngIf="!isLoading">Guardar Cambios</span>
+          <span *ngIf="isLoading"><i class="pi pi-spin pi-spinner mr-2"></i> Guardando...</span>
+        </button>
+      </div>
+    </div>
+  </div>
+</div>

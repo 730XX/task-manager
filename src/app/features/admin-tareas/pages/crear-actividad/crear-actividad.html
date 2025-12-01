@@ -1,0 +1,174 @@
+<div class="crear-actividad-container">
+  <p-toast />
+
+  <!-- Header -->
+  <div class="header-section">
+    <button 
+      pButton 
+      icon="pi pi-arrow-left" 
+      class="p-button-text p-button-rounded"
+      (click)="goBack()"
+      [disabled]="isLoading">
+    </button>
+    <h2 class="page-title">Crear Nueva Actividad</h2>
+  </div>
+
+  <!-- Formulario -->
+  <div class="form-card">
+    <form>
+      <!-- Título -->
+      <div class="form-group">
+        <label for="titulo" class="required-field">Título</label>
+        <input 
+          id="titulo"
+          type="text" 
+          pInputText 
+          [(ngModel)]="titulo"
+          name="titulo"
+          placeholder="Nombre de la actividad"
+          [disabled]="isLoading"
+          class="w-full" />
+        <small class="field-hint">Mínimo 5 caracteres</small>
+      </div>
+
+      <!-- Descripción -->
+      <div class="form-group">
+        <label for="descripcion">Descripción</label>
+        <textarea 
+          id="descripcion"
+          pInputTextarea
+          [(ngModel)]="descripcion"
+          name="descripcion"
+          placeholder="Descripción detallada de la actividad"
+          [disabled]="isLoading"
+          rows="4"
+          class="w-full">
+        </textarea>
+      </div>
+
+      <!-- Sucursal -->
+      <div class="form-group">
+        <label for="sucursal">Sucursal</label>
+        <input 
+          id="sucursal"
+          type="text" 
+          pInputText 
+          [(ngModel)]="sucursal"
+          name="sucursal"
+          placeholder="Ubicación o sucursal"
+          [disabled]="isLoading"
+          class="w-full" />
+      </div>
+
+      <!-- Estado -->
+      <div class="form-group">
+        <label for="estado" class="required-field">Estado</label>
+        <p-select
+          id="estado"
+          [(ngModel)]="estado"
+          name="estado"
+          [options]="estadosDisponibles"
+          optionLabel="label"
+          optionValue="value"
+          placeholder="Seleccionar estado"
+          [disabled]="isLoading"
+          class="w-full">
+        </p-select>
+      </div>
+
+      <!-- Fecha Programada -->
+      <div class="form-group">
+        <label for="fechaProgramada" class="required-field">Fecha Programada</label>
+        <p-datepicker
+          id="fechaProgramada"
+          [(ngModel)]="fechaProgramada"
+          name="fechaProgramada"
+          dateFormat="dd/mm/yy"
+          placeholder="Seleccionar fecha"
+          [disabled]="isLoading"
+          [showIcon]="true"
+          iconDisplay="input"
+          class="w-full">
+        </p-datepicker>
+      </div>
+
+      <!-- Hora Inicio -->
+      <div class="form-group">
+        <label for="horaInicio">Hora de Inicio</label>
+        <div class="flex gap-2 align-items-center">
+          <p-datepicker
+            id="horaInicio"
+            [(ngModel)]="horaInicio"
+            name="horaInicio"
+            [timeOnly]="true"
+            hourFormat="24"
+            placeholder="HH:mm"
+            [disabled]="isLoading"
+            [showIcon]="true"
+            iconDisplay="input"
+            class="flex-1">
+          </p-datepicker>
+          <button 
+            *ngIf="horaInicio"
+            pButton 
+            icon="pi pi-times" 
+            class="p-button-text p-button-rounded p-button-danger"
+            (click)="horaInicio = null"
+            type="button"
+            [disabled]="isLoading">
+          </button>
+        </div>
+      </div>
+
+      <!-- Hora Fin -->
+      <div class="form-group">
+        <label for="horaFin">Hora de Fin</label>
+        <div class="flex gap-2 align-items-center">
+          <p-datepicker
+            id="horaFin"
+            [(ngModel)]="horaFin"
+            name="horaFin"
+            [timeOnly]="true"
+            hourFormat="24"
+            placeholder="HH:mm"
+            [disabled]="isLoading"
+            [showIcon]="true"
+            iconDisplay="input"
+            class="flex-1">
+          </p-datepicker>
+          <button 
+            *ngIf="horaFin"
+            pButton 
+            icon="pi pi-times" 
+            class="p-button-text p-button-rounded p-button-danger"
+            (click)="horaFin = null"
+            type="button"
+            [disabled]="isLoading">
+          </button>
+        </div>
+      </div>
+
+      <!-- Botones de acción -->
+      <div class="action-buttons">
+        <button 
+          pButton 
+          label="Cancelar" 
+          icon="pi pi-times"
+          class="p-button-secondary"
+          type="button"
+          (click)="goBack()"
+          [disabled]="isLoading">
+        </button>
+        <button 
+          pButton 
+          type="button"
+          class="p-button-success"
+          (click)="guardar()"
+          [disabled]="!puedeGuardar || isLoading">
+          <i [class]="isLoading ? 'pi pi-spin pi-spinner' : 'pi pi-check'" style="margin-right: 0.5rem;"></i>
+          <span>{{ isLoading ? 'Guardando...' : 'Crear Actividad' }}</span>
+        </button>
+      </div>
+    </form>
+  </div>
+</div>

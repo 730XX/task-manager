@@ -1,0 +1,69 @@
+<div class="flex flex-col gap-3">
+  <!-- Lista de tareas -->
+  <div *ngFor="let tarea of tareas; trackBy: trackByTareaId" 
+       class="bg-white rounded-lg border border-gray-200 p-4 cursor-pointer hover:shadow-md transition-shadow"
+       [class.animate-pulse]="tareaRecienAnadida === tarea.id"
+       [style.border-left]="'4px solid ' + getBorderColor(tarea)"
+       (click)="verDetalleTarea(tarea.id)">
+    
+    <!-- Encabezado de la tarea -->
+    <div class="flex justify-between items-start gap-2 mb-3">
+      <h3 class="text-sm font-semibold text-gray-900 line-clamp-2 flex-1">
+        {{tarea.titulo}}
+      </h3>
+      
+      <!-- Estado -->
+      <span class="px-2 py-1 rounded-full text-xs font-medium whitespace-nowrap"
+            [ngClass]="{
+              'bg-green-50 text-green-600': tarea.estado === 'Completada',
+              'bg-blue-50 text-blue-600': tarea.estado === 'En progreso',
+              'bg-yellow-50 text-yellow-600': tarea.estado === 'Pendiente',
+              'bg-gray-200 text-gray-700': tarea.estado === 'Cerrada'
+            }">
+        {{tarea.estado}}
+      </span>
+    </div>
+
+    <!-- Detalles de la tarea -->
+    <div class="flex flex-col gap-2 text-xs text-gray-600">
+      <div class="flex items-center gap-2">
+        <i class="pi pi-tag"></i>
+        <span>Categoría: {{tarea.Categoria}}</span>
+      </div>
+      
+      <div class="flex items-center gap-2">
+        <i class="pi pi-clock"></i>
+        <span>{{tarea.horainicio}} - {{tarea.horafin}}</span>
+      </div>
+
+      <!-- Prioridad -->
+      <div class="flex items-center gap-2" *ngIf="tarea.Prioridad">
+        <i class="pi pi-flag-fill"></i>
+        <span class="px-2 py-0.5 rounded text-xs" [ngClass]="getPrioridadColor(tarea.Prioridad)">
+          {{tarea.Prioridad}}
+        </span>
+      </div>
+
+      <!-- Progreso de subtareas -->
+      <div class="flex items-center gap-2 mt-1" *ngIf="tarea.totalSubtareas > 0">
+        <i class="pi pi-list"></i>
+        <div class="flex-1">
+          <div class="flex justify-between text-xs mb-1">
+            <span>Subtareas: {{tarea.subtareasCompletadas}}/{{tarea.totalSubtareas}}</span>
+            <span>{{tarea.progreso}}%</span>
+          </div>
+          <div class="w-full bg-gray-200 rounded-full h-2">
+            <div class="bg-blue-500 h-2 rounded-full transition-all" 
+                 [style.width.%]="tarea.progreso"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Estado vacío -->
+  <div *ngIf="tareas.length === 0" class="text-center py-8 text-gray-500">
+    <i class="pi pi-inbox text-4xl mb-2"></i>
+    <p class="text-sm">No tienes tareas asignadas</p>
+  </div>
+</div>

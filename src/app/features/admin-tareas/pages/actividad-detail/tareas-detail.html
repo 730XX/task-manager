@@ -1,0 +1,178 @@
+<div class="min-h-screen bg-gray-50">
+  <!-- Toast -->
+  <p-toast></p-toast>
+  
+  <!-- Header -->
+  <div class="bg-white border-b border-gray-200 sticky top-0 z-10">
+    <div class="max-w-7xl mx-auto px-4 py-4">
+      <div class="flex items-center justify-between gap-3">
+        <div class="flex items-center gap-3">
+          <button class="p-2 hover:bg-gray-100 rounded-lg transition-colors" (click)="goBack()">
+            <i class="pi pi-arrow-left text-blue-600"></i>
+          </button>
+          <h1 class="text-xl font-bold text-gray-900">
+            Actividad ID-{{getFormattedId(tareaAdminSeleccionada?.id)}}
+          </h1>
+        </div>
+        <!-- Navegación rápida -->
+        <div class="flex items-center gap-2">
+          <a [routerLink]="['/admin-tareas/editar-actividad', tareaAdminSeleccionada?.id]" 
+             *ngIf="tareaAdminSeleccionada?.id"
+             class="px-4 py-2 text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors flex items-center gap-2">
+            <i class="pi pi-pencil"></i>
+            <span>Editar</span>
+          </a>
+          <a routerLink="/admin-tareas" class="px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-lg transition-colors flex items-center gap-2">
+            <i class="pi pi-list text-blue-600"></i>
+            <span class="hidden sm:inline">Actividades</span>
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Loading -->
+  <div *ngIf="isLoading" class="flex justify-center items-center py-20">
+    <i class="pi pi-spin pi-spinner text-4xl text-blue-600"></i>
+  </div>
+
+  <div *ngIf="!isLoading" class="max-w-7xl mx-auto px-4 py-6">
+    <!-- Tarjeta de tarea principal -->
+    <div class="bg-yellow-50 border-l-4 border-yellow-500 rounded-lg p-4 mb-6">
+      <div class="flex justify-between items-start gap-3">
+        <h2 class="text-base font-semibold text-gray-900 flex-1">
+          {{tareaAdminSeleccionada?.titulo || 'Sin título'}}
+        </h2>
+        <span class="px-3 py-1 rounded-full text-sm font-medium whitespace-nowrap"
+              [ngClass]="{
+                'bg-yellow-500 text-white': tareaAdminSeleccionada?.estado === 'Pendiente',
+                'bg-blue-500 text-white': tareaAdminSeleccionada?.estado === 'En progreso',
+                'bg-green-500 text-white': tareaAdminSeleccionada?.estado === 'Completada'
+              }">
+          {{tareaAdminSeleccionada?.estado || 'Pendiente'}}
+        </span>
+      </div>
+    </div>
+
+    <!-- Descripción -->
+    <div class="bg-white rounded-lg p-4 mb-4">
+      <h3 class="text-sm font-bold text-gray-700 mb-2">Descripción</h3>
+      <p class="text-sm text-gray-600">
+        {{tareaAdminSeleccionada?.titulo || 'Sin descripción disponible'}}
+      </p>
+    </div>
+
+    <!-- Información de la tarea -->
+    <div class="bg-white rounded-lg p-4 mb-6">
+      <div class="grid grid-cols-2 gap-4 mb-3">
+        <div class="flex items-center gap-2 text-sm">
+          <i class="pi pi-tag text-gray-500"></i>
+          <span class="text-gray-600">Categoría:</span>
+          <span class="font-medium text-black">{{tareaAdminSeleccionada?.Categoria || 'Sin categoría'}}</span>
+        </div>
+        <div class="flex items-center gap-2 text-sm">
+          <i class="pi pi-building text-gray-500"></i>
+          <span class="text-gray-600">Sucursal:</span>
+          <span class="font-medium text-gray-900">{{tareaAdminSeleccionada?.sucursal || 'Sin sucursal'}}</span>
+        </div>
+      </div>
+      <div class="grid grid-cols-3 gap-4">
+        <div class="flex items-center gap-2 text-sm">
+          <i class="pi pi-clock text-gray-500"></i>
+          <span class="text-gray-600">Programada:</span>
+          <span class="font-medium text-gray-900">{{tareaAdminSeleccionada?.horaprogramada || '--:--'}}</span>
+        </div>
+        <div class="flex items-center gap-2 text-sm">
+          <i class="pi pi-clock text-gray-500"></i>
+          <span class="text-gray-600">Inicio:</span>
+          <span class="font-medium text-gray-900">{{tareaAdminSeleccionada?.horainicio || '--:--'}}</span>
+        </div>
+        <div class="flex items-center gap-2 text-sm">
+          <i class="pi pi-clock text-gray-500"></i>
+          <span class="text-gray-600">Fin:</span>
+          <span class="font-medium text-gray-900">{{tareaAdminSeleccionada?.horafin || '--:--'}}</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Sección de lista de tareas -->
+    <div class="bg-white rounded-lg p-4 mb-4">
+      <div class="flex justify-between items-center mb-4">
+        <h3 class="text-lg font-bold text-gray-900">Lista de tareas</h3>
+        <span class="text-gray-500">{{progresoGeneral.completadas}}/{{progresoGeneral.total}}</span>
+      </div>
+      
+      <!-- Barra de progreso -->
+      <div class="w-full bg-gray-200 rounded-full h-3 mb-4">
+        <div class="bg-green-500 h-3 rounded-full transition-all" 
+             [style.width.%]="progresoGeneral.porcentaje"></div>
+      </div>
+
+      <!-- Buscador -->
+      <div class="flex gap-3 mb-4">
+        <div class="flex-1 relative">
+          <i class="pi pi-search absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
+          <input 
+            type="text" 
+            class="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg"
+            placeholder="Buscar pendientes..."
+            [(ngModel)]="searchTerm">
+        </div>
+        <button class="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50" (click)="abrirFiltros()">
+          <i class="pi pi-filter"></i>
+        </button>
+      </div>
+
+      <!-- Lista de subtareas -->
+      <div class="space-y-3 max-h-96 overflow-y-auto">
+        <div *ngFor="let subtarea of tareasFiltradas; let isLast = last" 
+             class="relative pl-6">
+          <!-- Línea vertical -->
+          <div *ngIf="!isLast" class="absolute left-2 top-6 bottom-0 w-0.5 bg-blue-200"></div>
+          
+          <!-- Punto -->
+          <div class="absolute left-0 top-2 w-4 h-4 bg-blue-50 rounded-full border-2 border-blue-500 flex items-center justify-center">
+            <div class="w-2 h-2 bg-blue-500 rounded-full"></div>
+          </div>
+
+          <!-- Tarjeta de subtarea -->
+          <div class="bg-white border border-gray-200 rounded-lg p-3 cursor-pointer hover:shadow-md transition-shadow relative"
+               (click)="navegarASubtarea(subtarea)">
+            <!-- Estado -->
+            <div class="absolute top-0 right-0 rounded-tr-lg rounded-bl-lg px-3 py-1"
+                 [ngClass]="{
+                   'bg-green-500 text-white': subtarea.estado === 'Completada',
+                   'bg-blue-500 text-white': subtarea.estado === 'En progreso',
+                   'bg-yellow-500 text-white': subtarea.estado === 'Pendiente'
+                 }">
+              <span class="text-xs font-medium">{{subtarea.estado}}</span>
+            </div>
+
+            <h4 class="text-sm font-semibold text-gray-900 mb-2 pr-20">{{subtarea.titulo}}</h4>
+            
+            <div class="space-y-1 text-xs text-gray-600">
+              <div class="flex items-center gap-2">
+                <i class="pi pi-user text-gray-400"></i>
+                <span>Responsable: {{subtarea.usuarioasignado}}</span>
+              </div>
+              <div class="flex items-center gap-2">
+                <i class="pi pi-tag text-gray-400"></i>
+                <span>Subcategoría: {{subtarea.Categoria}}</span>
+              </div>
+              <div class="flex items-center gap-2">
+                <i class="pi pi-clock text-gray-400"></i>
+                <span>Hora: {{subtarea.horainicio}}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Estado vacío -->
+        <div *ngIf="tareasFiltradas.length === 0 && !isLoading" class="text-center py-8 text-gray-500">
+          <i class="pi pi-inbox text-4xl mb-2 block"></i>
+          <p class="text-sm">No hay subtareas disponibles</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

@@ -1,0 +1,236 @@
+<div class="min-h-screen bg-gray-50">
+  <!-- Toast para mensajes -->
+  <p-toast></p-toast>
+  
+  <!-- Header -->
+  <div class="bg-white border-b border-gray-200 sticky top-0 z-10">
+    <div class="max-w-7xl mx-auto px-4 py-4">
+      <div class="flex justify-between items-center mb-4">
+        <h1 class="text-2xl font-bold text-gray-900">Tareas</h1>
+        <div class="flex gap-2">
+          <button 
+            class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors flex items-center gap-2"
+            (click)="cerrarSesion()">
+            <i class="pi pi-sign-out"></i>
+            <span>Cerrar Sesión</span>
+          </button>
+          <button 
+            class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors flex items-center gap-2"
+            (click)="crearNuevaActividad()">
+            <i class="pi pi-plus-circle"></i>
+            <span>Nueva Actividad</span>
+          </button>
+          <button 
+            class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2"
+            (click)="crearNuevaTarea()">
+            <i class="pi pi-plus"></i>
+            <span>Nueva Tarea</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Tabs -->
+      <div class="flex gap-2 border-b border-gray-200">
+        <button 
+          class="px-4 py-2 text-sm font-medium transition-colors"
+          [class.text-blue-600]="selectedTab === 'mis-tareas'"
+          [class.border-b-2]="selectedTab === 'mis-tareas'"
+          [class.border-blue-600]="selectedTab === 'mis-tareas'"
+          [class.text-gray-600]="selectedTab !== 'mis-tareas'"
+          (click)="segmentChanged('mis-tareas')">
+          Mis Tareas
+        </button>
+        <button 
+          class="px-4 py-2 text-sm font-medium transition-colors"
+          [class.text-blue-600]="selectedTab === 'actividades'"
+          [class.border-b-2]="selectedTab === 'actividades'"
+          [class.border-blue-600]="selectedTab === 'actividades'"
+          [class.text-gray-600]="selectedTab !== 'actividades'"
+          (click)="segmentChanged('actividades')">
+          Actividades
+        </button>
+        <button 
+          class="px-4 py-2 text-sm font-medium transition-colors"
+          [class.text-blue-600]="selectedTab === 'tareas-sin-asignar'"
+          [class.border-b-2]="selectedTab === 'tareas-sin-asignar'"
+          [class.border-blue-600]="selectedTab === 'tareas-sin-asignar'"
+          [class.text-gray-600]="selectedTab !== 'tareas-sin-asignar'"
+          (click)="segmentChanged('tareas-sin-asignar')">
+          Sin Asignar
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Contenido -->
+  <div class="max-w-7xl mx-auto px-4 py-6">
+    <!-- Resumen de estadísticas -->
+    <div class="grid grid-cols-3 gap-4 mb-6" *ngIf="selectedTab === 'mis-tareas'">
+      <div class="bg-yellow-50 rounded-lg p-4 border border-yellow-200">
+        <div class="flex items-center justify-between">
+          <div>
+            <p class="text-xs text-yellow-600 uppercase font-medium">Pendientes</p>
+            <p class="text-2xl font-bold text-yellow-700">{{resumen.totalTareas - resumen.tareasCompletadas - resumen.tareasEnProgreso}}</p>
+          </div>
+          <i class="pi pi-clock text-3xl text-yellow-500"></i>
+        </div>
+      </div>
+
+      <div class="bg-blue-50 rounded-lg p-4 border border-blue-200">
+        <div class="flex items-center justify-between">
+          <div>
+            <p class="text-xs text-blue-600 uppercase font-medium">En Progreso</p>
+            <p class="text-2xl font-bold text-blue-700">{{resumen.tareasEnProgreso}}</p>
+          </div>
+          <i class="pi pi-spin pi-spinner text-3xl text-blue-500"></i>
+        </div>
+      </div>
+
+      <div class="bg-green-50 rounded-lg p-4 border border-green-200">
+        <div class="flex items-center justify-between">
+          <div>
+            <p class="text-xs text-green-600 uppercase font-medium">Completadas</p>
+            <p class="text-2xl font-bold text-green-700">{{resumen.tareasCompletadas}}/{{resumen.totalTareas}}</p>
+          </div>
+          <i class="pi pi-check-circle text-3xl text-green-500"></i>
+        </div>
+      </div>
+    </div>
+
+    <!-- Barra de búsqueda y filtros -->
+    <div class="flex gap-3 mb-6">
+      <div class="flex-1 relative">
+        <i class="pi pi-search absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
+        <input 
+          type="text" 
+          class="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
+          placeholder="Buscar tareas..."
+          [(ngModel)]="searchTerm"
+          (input)="onSearchInput($event)">
+      </div>
+      <button 
+        class="px-5 py-2.5 bg-white border-2 border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 hover:border-blue-500 hover:text-blue-600 transition-all flex items-center gap-2 font-medium shadow-sm"
+        [class.border-blue-500]="filtrosActivos"
+        [class.bg-blue-50]="filtrosActivos"
+        [class.text-blue-600]="filtrosActivos"
+        (click)="abrirFiltros()">
+        <i class="pi pi-filter text-base"></i>
+        <span>Filtros</span>
+        <span *ngIf="filtrosActivos" class="bg-blue-600 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
+          <i class="pi pi-check text-[10px]"></i>
+        </span>
+      </button>
+    </div>
+
+    <!-- Botón de asignar tareas (solo visible en tab sin asignar) -->
+    <div *ngIf="selectedTab === 'tareas-sin-asignar' && tareasSeleccionadas.size > 0" 
+         class="mb-4 p-4 bg-blue-50 border border-blue-200 rounded-lg flex items-center justify-between">
+      <span class="text-sm text-blue-700">
+        {{tareasSeleccionadas.size}} tarea(s) seleccionada(s)
+      </span>
+      <button 
+        class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+        (click)="asignarTareasSeleccionadas()">
+        Asignarme Tareas
+      </button>
+    </div>
+
+    <!-- Loading -->
+    <div *ngIf="isLoading" class="flex justify-center py-12">
+      <i class="pi pi-spin pi-spinner text-4xl text-blue-600"></i>
+    </div>
+
+    <!-- Contenido de tabs -->
+    <div *ngIf="!isLoading">
+      <app-mis-tareas 
+        *ngIf="selectedTab === 'mis-tareas'"
+        [tareas]="tareasFiltradas"
+        [tareaRecienAnadida]="tareaRecienAnadida"
+        (completarTareaEvento)="completarTarea($event)">
+      </app-mis-tareas>
+
+      <!-- Tab Actividades -->
+      <div *ngIf="selectedTab === 'actividades'" class="flex flex-col gap-3">
+        <div *ngFor="let actividad of actividades" 
+             class="bg-white rounded-lg border border-gray-200 p-4 cursor-pointer hover:shadow-md transition-shadow"
+             (click)="verDetalleActividad(actividad.actividades_id.toString())">
+          <div class="flex justify-between items-start gap-2 mb-3">
+            <div class="flex-1">
+              <div class="text-xs text-gray-500 mb-1">ID-{{actividad.actividades_id.toString().padStart(3, '0')}}</div>
+              <h3 class="text-sm font-semibold text-gray-900">{{actividad.actividades_titulo}}</h3>
+              <p class="text-xs text-gray-600 mt-1" *ngIf="actividad.actividades_descripcion">{{actividad.actividades_descripcion}}</p>
+            </div>
+            <span class="px-2 py-1 rounded-full text-xs font-medium whitespace-nowrap"
+                  [ngClass]="{
+                    'bg-green-50 text-green-600': actividad.actividades_estado === 'COMPLETADA',
+                    'bg-blue-50 text-blue-600': actividad.actividades_estado === 'ACTIVA',
+                    'bg-gray-50 text-gray-600': actividad.actividades_estado === 'PAUSADA'
+                  }">
+              {{actividad.actividades_estado}}
+            </span>
+          </div>
+          
+          <div class="flex flex-col gap-2 text-xs text-gray-600">
+            <div class="flex items-center gap-4">
+              <div class="flex items-center gap-2">
+                <i class="pi pi-list"></i>
+                <span>{{actividad.total_tareas}} tarea(s)</span>
+              </div>
+              <div class="flex items-center gap-2">
+                <i class="pi pi-check-circle text-green-600"></i>
+                <span>{{actividad.tareas_completadas}} completadas</span>
+              </div>
+              <div class="flex items-center gap-2">
+                <i class="pi pi-clock text-yellow-600"></i>
+                <span>{{actividad.tareas_pendientes}} pendientes</span>
+              </div>
+            </div>
+            
+            <div class="flex items-center gap-2 mt-2">
+              <span class="text-xs font-medium">Progreso: {{actividad.progreso_porcentaje}}%</span>
+            </div>
+            <div class="w-full bg-gray-200 rounded-full h-2">
+              <div class="bg-blue-600 h-2 rounded-full transition-all duration-300"
+                   [style.width.%]="actividad.progreso_porcentaje">
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <div *ngIf="actividades.length === 0 && !isLoading" 
+             class="text-center py-12 text-gray-500">
+          <i class="pi pi-inbox text-5xl mb-3"></i>
+          <p>No hay actividades disponibles</p>
+        </div>
+        
+        <div *ngIf="isLoading" class="text-center py-12">
+          <i class="pi pi-spin pi-spinner text-4xl text-blue-600"></i>
+        </div>
+      </div>
+
+      <app-equipos-tareas 
+        *ngIf="selectedTab === 'tareas-sin-asignar'"
+        [tareas]="tareasFiltradas"
+        [tareasSeleccionadas]="tareasSeleccionadas"
+        (toggleSeleccion)="toggleSeleccionTarea($event)"
+        (asignarTareas)="asignarTareasSeleccionadas()">
+      </app-equipos-tareas>
+    </div>
+  </div>
+</div>
+
+<!-- Modal de filtros para usuario (Mis Tareas y Sin Asignar) -->
+<app-filtros-modal
+  [visible]="modalFiltrosVisible"
+  [selectedTab]="selectedTab"
+  (onClose)="cerrarModalFiltros()"
+  (onApply)="aplicarFiltros($event)">
+</app-filtros-modal>
+
+<!-- Modal de filtros para admin (Actividades) -->
+<app-filtros-admin-modal
+  [visible]="modalFiltrosAdminVisible"
+  [esTareaInfo]="false"
+  (onClose)="cerrarModalFiltrosAdmin()"
+  (onApply)="aplicarFiltros($event)">
+</app-filtros-admin-modal>
