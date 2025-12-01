@@ -90,4 +90,4 @@ core/
 ---
 
 ## Autor
-Desarrollado por el equipo de desarrollo para el CEO. ¡Listo para demo y revisión!
+Desarrollado por Elder Cardoza para el CEO. ¡Listo para demo y revisión!
