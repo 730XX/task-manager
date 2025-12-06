@@ -49,15 +49,9 @@
       <!-- Sucursal -->
       <div class="form-group">
         <label for="sucursal">Sucursal</label>
-        <input 
-          id="sucursal"
-          type="text" 
-          pInputText 
-          [(ngModel)]="sucursal"
-          name="sucursal"
-          placeholder="Ubicación o sucursal"
-          [disabled]="isLoading"
-          class="w-full" />
+        <p-select id="sucursal" [(ngModel)]="sucursalId" name="sucursalId" [options]="sucursalesDisponibles" optionLabel="nombre"
+          optionValue="id" placeholder="Seleccionar sucursal" [disabled]="isLoading" class="w-full" appendTo="body">
+        </p-select>
       </div>
 
       <!-- Estado -->

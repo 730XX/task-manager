@@ -1,21 +1,13 @@
 <p-dialog
   [(visible)]="visible"
   [modal]="true"
-  [style]="{width: '450px'}"
+  [style]="{width: '520px'}"
   [closable]="true"
-  (onHide)="cerrarModal()">
-  
-  <ng-template pTemplate="header">
-    <div class="flex items-center justify-between w-full">
-      <span class="text-lg font-bold text-gray-900">Filtrar por</span>
-      <button 
-        class="text-blue-600 text-sm hover:underline flex items-center gap-2"
-        (click)="limpiarFiltros()">
-        <i class="pi pi-replay"></i>
-        <span>Limpiar filtro</span>
-      </button>
-    </div>
-  </ng-template>
+  appendTo="body"
+  styleClass="filter-dialog"
+  baseZIndex="10000"
+  (onHide)="cerrarModal()"
+  header="Filtrar por">
 
   <div class="flex flex-col gap-4 py-4">
     <!-- Filtros para mis tareas -->
@@ -71,19 +63,19 @@
   </div>
 
   <ng-template pTemplate="footer">
-    <div class="flex gap-3">
-      <p-button 
-        label="Limpiar" 
-        severity="secondary"
-        [outlined]="true"
-        (onClick)="limpiarFiltros()"
-        styleClass="flex-1">
-      </p-button>
-      <p-button 
-        label="Aplicar Filtros" 
-        (onClick)="aplicarFiltros()"
-        styleClass="flex-1">
-      </p-button>
+    <div class="flex gap-3 justify-end">
+      <button 
+        type="button"
+        class="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
+        (click)="limpiarFiltros()">
+        Limpiar
+      </button>
+      <button 
+        type="button"
+        class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+        (click)="aplicarFiltros()">
+        Aplicar Filtros
+      </button>
     </div>
   </ng-template>
 </p-dialog>

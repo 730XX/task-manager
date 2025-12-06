@@ -3,7 +3,7 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { Location } from '@angular/common';
 import { TareasService, ReabrirTareaRequest } from '../../../../core/services/tareas.service';
 import { CategoriasService } from '../../../../core/services/categorias.service';
-import { Tarea, TareaUI, tareaAUI } from '../../../../core/interfaces/tarea.interface';
+import { Tarea, TareaUI, tareaAUI, HistorialTarea } from '../../../../core/interfaces/tarea.interface';
 import { Categoria } from '../../../../core/interfaces/categoria.interface';
 import { Subcategoria } from '../../../../core/interfaces/subcategoria.interface';
 import { isSuccess } from '../../../../core/interfaces/api-response.interface';
@@ -23,6 +23,8 @@ export class SubtareaDetail implements OnInit {
   comentario: string = '';
   imagenesAdjuntas: string[] = [];
   isLoading: boolean = false;
+  historial: HistorialTarea[] = [];
+  mostrarHistorial: boolean = false;
   
   // Modal de reapertura
   mostrarModalReabrir: boolean = false;
@@ -38,7 +40,7 @@ export class SubtareaDetail implements OnInit {
     private location: Location,
     public tareasService: TareasService,
     private categoriasService: CategoriasService,
-    private messageService: MessageService
+    private messageService: MessageService,
   ) {}
 
   ngOnInit(): void {
@@ -88,6 +90,8 @@ export class SubtareaDetail implements OnInit {
           
           // Convertir al formato del frontend
           this.tarea = tareaAUI(tarea.data, categoriaNombre, subcategoriaNombre);
+          // Cargar historial
+          this.cargarHistorial(id);
         }
         this.isLoading = false;
       },
@@ -108,11 +112,89 @@ export class SubtareaDetail implements OnInit {
     this.cargarDatos(id);
   }
 
+  cargarHistorial(id: string): void {
+    this.tareasService.obtenerHistorialTarea(Number(id)).subscribe({
+      next: (response) => {
+        if (isSuccess(response) && response.data) {
+          // Mostrar TODO el historial, ordenado por fecha descendente
+          this.historial = response.data;
+        }
+      },
+      error: (error) => {
+        console.error('Error al cargar historial:', error);
+      }
+    });
+  }
+
+  toggleHistorial(): void {
+    this.mostrarHistorial = !this.mostrarHistorial;
+  }
+
+  getTipoComentarioLabel(accion: string): string {
+    const labels: Record<string, string> = {
+      'Completado': 'Tarea completada',
+      'Reapertura': 'Tarea reabierta',
+      'Inicio': 'Tarea iniciada',
+      'Pausa': 'Tarea pausada'
+    };
+    return labels[accion] || accion;
+  }
+
+  getTipoComentarioBadgeColor(accion: string): string {
+    const colors: Record<string, string> = {
+      'Completado': 'bg-green-500',
+      'Reapertura': 'bg-orange-500',
+      'Inicio': 'bg-blue-500',
+      'Pausa': 'bg-yellow-500'
+    };
+    return colors[accion] || 'bg-gray-500';
+  }
+
+  getTipoComentarioIcon(accion: string): string {
+    const icons: Record<string, string> = {
+      'Completado': 'pi-check-circle',
+      'Reapertura': 'pi-replay',
+      'Inicio': 'pi-play-circle',
+      'Pausa': 'pi-pause-circle'
+    };
+    return icons[accion] || 'pi-circle';
+  }
+  
+  tieneComentario(item: any): boolean {
+    return item.comentario && item.comentario.trim() !== '';
+  }
+
+  formatearFecha(fecha: string): string {
+    const date = new Date(fecha);
+    const opciones: Intl.DateTimeFormatOptions = {
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    };
+    return date.toLocaleDateString('es-ES', opciones);
+  }
+
+  formatearFechaCompleta(fecha: string): string {
+    const date = new Date(fecha);
+    const dia = date.getDate().toString().padStart(2, '0');
+    const mes = (date.getMonth() + 1).toString().padStart(2, '0');
+    const anio = date.getFullYear();
+    const hora = date.getHours().toString().padStart(2, '0');
+    const minutos = date.getMinutes().toString().padStart(2, '0');
+    
+    return `${dia}/${mes}/${anio} a las ${hora}:${minutos}`;
+  }
+
   iniciarTarea(): void {
     if (!this.tarea || (this.tarea.estado !== 'Pendiente' && this.tarea.estado !== 'Pausada')) return;
 
     this.isLoading = true;
-    this.tareasService.iniciarTarea(Number(this.tarea.id)).subscribe({
+    const comentarioParaEnviar = this.comentario.trim() || undefined;
+    
+    this.tareasService.iniciarTarea(Number(this.tarea.id), comentarioParaEnviar).subscribe({
+
       next: (response) => {
         if (isSuccess(response)) {
           this.messageService.add({
@@ -121,6 +203,7 @@ export class SubtareaDetail implements OnInit {
             detail: response.mensajes?.[0] || 'Tarea en progreso',
             life: 3000
           });
+          this.comentario = '';
           // Recargar los datos de la tarea
           this.cargarTarea(this.tarea!.id);
         }
@@ -142,7 +225,9 @@ export class SubtareaDetail implements OnInit {
     if (!this.tarea || this.tarea.estado !== 'En progreso') return;
 
     this.isLoading = true;
-    this.tareasService.pausarTarea(Number(this.tarea.id)).subscribe({
+    const comentarioParaEnviar = this.comentario.trim() || undefined;
+    
+    this.tareasService.pausarTarea(Number(this.tarea.id), comentarioParaEnviar).subscribe({
       next: (response) => {
         if (isSuccess(response)) {
           this.messageService.add({
@@ -151,6 +236,7 @@ export class SubtareaDetail implements OnInit {
             detail: response.mensajes?.[0] || 'Tarea pausada correctamente',
             life: 3000
           });
+          this.comentario = '';
           // Recargar los datos de la tarea
           this.cargarTarea(this.tarea!.id);
         }
@@ -172,7 +258,9 @@ export class SubtareaDetail implements OnInit {
     if (!this.tarea) return;
 
     this.isLoading = true;
-    this.tareasService.completarTarea(Number(this.tarea.id)).subscribe({
+    const comentarioParaEnviar = this.comentario.trim() || undefined;
+    
+    this.tareasService.completarTarea(Number(this.tarea.id), comentarioParaEnviar).subscribe({
       next: (response) => {
         if (isSuccess(response)) {
           this.messageService.add({
@@ -181,6 +269,7 @@ export class SubtareaDetail implements OnInit {
             detail: response.mensajes?.[0] || 'Tarea marcada como completada',
             life: 3000
           });
+          this.comentario = '';
           // Recargar los datos de la tarea
           this.cargarTarea(this.tarea!.id);
         }

@@ -1,0 +1,45 @@
+/* Estilos específicos para el modal admin de filtros */
+.p-dialog .p-dialog-header {
+	display: flex !important;
+	align-items: center !important;
+	justify-content: space-between !important;
+	color: #1e293b !important;
+}
+
+.p-dialog .p-dialog-footer {
+	display: flex !important;
+	gap: 0.75rem !important;
+	align-items: center !important;
+}
+
+.p-dialog .p-dialog-title {
+	color: #111827 !important; /* Asegura contraste */
+	font-weight: 600 !important;
+}
+
+.p-dialog .p-dialog-content {
+	padding-top: 0.75rem !important;
+}
+
+/* Make footer sticky and content scrollable inside the dialog */
+:host ::ng-deep .filter-dialog {
+	display: flex !important;
+	flex-direction: column !important;
+	max-height: 70vh !important;
+}
+
+:host ::ng-deep .filter-dialog .p-dialog-content {
+	flex: 1 1 auto !important;
+	min-height: 0 !important;
+	overflow-y: auto !important;
+	padding: 1rem !important;
+}
+
+:host ::ng-deep .filter-dialog .p-dialog-footer {
+	position: sticky !important;
+	bottom: 0 !important;
+	background: white !important;
+	z-index: 10001 !important;
+	padding: 0.75rem !important;
+}
+

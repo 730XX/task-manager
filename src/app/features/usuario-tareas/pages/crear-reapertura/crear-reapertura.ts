@@ -19,7 +19,9 @@ export class CrearReapertura implements OnInit {
   observaciones: string = '';
   prioridadNueva: string = '';
   fechaVencimientoNueva: Date | null = null;
+  horaVencimientoNueva: Date | null = null;
   isLoading: boolean = false;
+  //minDate: Date = new Date();
 
   motivosReapertura = [
     { label: 'Error en la ejecución', value: 'ERROR_EJECUCION' },
@@ -123,11 +125,26 @@ export class CrearReapertura implements OnInit {
       }
     }
 
-    // Formatear fecha si existe
+    // Formatear fecha y hora si existen
     let fechaVencimientoStr: string | undefined = undefined;
     if (this.fechaVencimientoNueva) {
       const fecha = new Date(this.fechaVencimientoNueva);
-      fechaVencimientoStr = fecha.toISOString().slice(0, 19).replace('T', ' ');
+      
+      // Si se especificó hora, combinar fecha + hora
+      if (this.horaVencimientoNueva) {
+        const hora = new Date(this.horaVencimientoNueva);
+        fecha.setHours(hora.getHours(), hora.getMinutes(), 0, 0);
+      }
+      
+      // Formato: YYYY-MM-DD HH:MM:SS
+      const year = fecha.getFullYear();
+      const month = (fecha.getMonth() + 1).toString().padStart(2, '0');
+      const day = fecha.getDate().toString().padStart(2, '0');
+      const hours = fecha.getHours().toString().padStart(2, '0');
+      const minutes = fecha.getMinutes().toString().padStart(2, '0');
+      const seconds = '00';
+      
+      fechaVencimientoStr = `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
     }
 
     const request: ReabrirTareaRequest = {

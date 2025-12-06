@@ -87,16 +87,33 @@
         <!-- Nueva fecha de vencimiento -->
         <div>
           <label class="text-sm font-medium text-gray-700 mb-2 block">
-            Ajustar fecha de vencimiento
+            Ajustar fecha y hora de vencimiento
           </label>
-          <p-datepicker
-            [(ngModel)]="fechaVencimientoNueva"
-            [showIcon]="true"
-            [minDate]="minDate"
-            dateFormat="dd/mm/yy"
-            placeholder="Seleccionar fecha"
-            styleClass="w-full">
-          </p-datepicker>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <!-- Fecha -->
+            <div>
+              <p-datepicker
+                [(ngModel)]="fechaVencimientoNueva"
+                [showIcon]="true"
+                [minDate]="minDate"
+                dateFormat="dd/mm/yy"
+                placeholder="Seleccionar fecha"
+                styleClass="w-full">
+              </p-datepicker>
+            </div>
+            <!-- Hora -->
+            <div>
+              <p-datepicker
+                [(ngModel)]="horaVencimientoNueva"
+                [timeOnly]="true"
+                [showIcon]="true"
+                hourFormat="24"
+                placeholder="Seleccionar hora"
+                styleClass="w-full">
+              </p-datepicker>
+            </div>
+          </div>
+          <p class="text-xs text-gray-500 mt-1">La fecha y hora son opcionales. Si no las especificas, se mantendrán las actuales.</p>
         </div>
       </div>
     </div>

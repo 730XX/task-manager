@@ -309,9 +309,9 @@ export function tareaAUI(tarea: Tarea, categoriaNombre?: string, subcategoriaNom
 // ============================================
 
 /**
- * Tipos de acción en el historial
+ * Tipos de acción en el historial (coinciden con ENUM de BD)
  */
-export type AccionHistorial = 'CREADA' | 'ASIGNADA' | 'EN_PROGRESO' | 'COMPLETADA' | 'PAUSADA' | 'REABIERTA' | 'EDITADA' | 'COMENTARIO';
+export type AccionHistorial = 'Inicio' | 'Pausa' | 'Completado' | 'Reapertura';
 
 /**
  * Registro del historial de una tarea
@@ -323,7 +323,7 @@ export interface HistorialTarea {
   accion: AccionHistorial;
   comentario: string | null;
   fecha_accion: string;
-  usuario_nombre: string;
+  usuario_nombre?: string;
 }
 
 /**

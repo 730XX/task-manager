@@ -113,6 +113,93 @@
       </div>
     </div>
 
+    <!-- Sección de Historial de la Tarea -->
+    <div *ngIf="historial.length > 0" class="mb-6">
+      <!-- Header -->
+      <div class="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-t-xl border border-gray-200 px-4 py-3">
+        <div class="flex items-center justify-between">
+          <div class="flex items-center gap-2">
+            <div class="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
+              <i class="pi pi-history text-white text-sm"></i>
+            </div>
+            <div>
+              <h3 class="text-sm font-bold text-gray-900">Historial de la Tarea</h3>
+              <p class="text-xs text-gray-600">{{historial.length}} registro(s)</p>
+            </div>
+          </div>
+          <button 
+            type="button"
+            class="px-3 py-1.5 text-xs font-medium text-blue-700 bg-white border border-blue-200 rounded-lg hover:bg-blue-50 transition-colors flex items-center gap-1.5"
+            (click)="toggleHistorial()">
+            <span>{{mostrarHistorial ? 'Ocultar' : 'Ver historial'}}</span>
+            <i class="pi text-xs" [ngClass]="mostrarHistorial ? 'pi-chevron-up' : 'pi-chevron-down'"></i>
+          </button>
+        </div>
+      </div>
+
+      <!-- Timeline de eventos -->
+      <div *ngIf="mostrarHistorial" class="bg-white border-x border-b border-gray-200 rounded-b-xl p-4">
+        <div class="relative">
+          <!-- Línea vertical del timeline -->
+          <div class="absolute left-4 top-0 bottom-0 w-0.5 bg-gray-200"></div>
+          
+          <!-- Lista de eventos -->
+          <div class="space-y-4">
+            <div *ngFor="let item of historial; let isLast = last" class="relative pl-10">
+              <!-- Punto del timeline -->
+              <div class="absolute left-2 top-1 w-4 h-4 rounded-full flex items-center justify-center shadow-md"
+                   [ngClass]="getTipoComentarioBadgeColor(item.accion)">
+                <i class="pi text-white text-xs" [ngClass]="getTipoComentarioIcon(item.accion)"></i>
+              </div>
+              
+              <!-- Contenido del evento -->
+              <div class="bg-gray-50 rounded-lg p-4 hover:shadow-md transition-shadow border border-gray-100">
+                <!-- Header del evento -->
+                <div class="flex items-start justify-between gap-3 mb-3">
+                  <div class="flex-1">
+                    <h4 class="text-sm font-semibold text-gray-900 mb-1">
+                      {{getTipoComentarioLabel(item.accion)}}
+                    </h4>
+                    <div class="flex items-center gap-2 text-xs text-gray-600">
+                      <div class="flex items-center gap-1">
+                        <i class="pi pi-user"></i>
+                        <span class="font-medium">{{item.usuario_nombre || 'Sistema'}}</span>
+                      </div>
+                      <span class="text-gray-400">•</span>
+                      <div class="flex items-center gap-1">
+                        <i class="pi pi-clock"></i>
+                        <span>{{formatearFechaCompleta(item.fecha_accion)}}</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                
+                <!-- Comentario (si existe) -->
+                <div *ngIf="tieneComentario(item)" class="mt-3 pt-3 border-t border-gray-200">
+                  <div class="flex items-start gap-2">
+                    <i class="pi pi-comment text-gray-400 text-sm mt-0.5"></i>
+                    <div class="flex-1">
+                      <p class="text-xs text-gray-500 font-medium mb-1">Comentario:</p>
+                      <p class="text-sm text-gray-700 leading-relaxed whitespace-pre-line">{{item.comentario}}</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Mensaje si no hay historial -->
+        <div *ngIf="historial.length === 0" class="text-center py-12">
+          <div class="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-3">
+            <i class="pi pi-history text-gray-400 text-2xl"></i>
+          </div>
+          <p class="text-sm text-gray-500 font-medium">No hay registros en el historial</p>
+          <p class="text-xs text-gray-400 mt-1">Los eventos de la tarea aparecerán aquí</p>
+        </div>
+      </div>
+    </div>
+
     <!-- Alerta para tareas pendientes -->
     <div *ngIf="tarea?.estado === 'Pendiente'" class="bg-orange-50 border border-orange-200 rounded-lg p-3 mb-6 flex items-center gap-3">
       <i class="pi pi-info-circle text-orange-500"></i>
@@ -143,14 +230,14 @@
     </div>
 
     <!-- Comentario para tareas completadas -->
-    <div *ngIf="tarea?.estado === 'Completada' && tarea?.id !== '1'" class="mb-6">
+    <!-- <div *ngIf="tarea?.estado === 'Completada' && tarea?.id !== '1'" class="mb-6">
       <h3 class="text-sm font-bold text-gray-700 mb-2">
         Comentario <span class="text-xs text-gray-500">(Opcional)</span>
       </h3>
       <div class="bg-gray-50 rounded-lg p-3">
         <p class="text-sm text-gray-700">{{comentario}}</p>
       </div>
-    </div>
+    </div> -->
 
     <!-- Botones de acción -->
     <div class="flex gap-3 mt-6">

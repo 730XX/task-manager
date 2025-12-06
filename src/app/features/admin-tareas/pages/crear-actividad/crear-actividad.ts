@@ -5,6 +5,9 @@ import { ActividadesService } from '../../../../core/services/actividades.servic
 import { CrearActividadRequest } from '../../../../core/interfaces/actividad.interface';
 import { isSuccess } from '../../../../core/interfaces/api-response.interface';
 import { MessageService } from 'primeng/api';
+import { SucursalesService } from '../../../../core/services';
+import { Sucursal } from '../../../../core/interfaces';
+import { forkJoin } from 'rxjs';
 
 @Component({
   selector: 'app-crear-actividad',
@@ -12,10 +15,11 @@ import { MessageService } from 'primeng/api';
   templateUrl: './crear-actividad.html',
   styleUrl: './crear-actividad.scss',
 })
+
 export class CrearActividad implements OnInit {
   titulo: string = '';
   descripcion: string = '';
-  sucursal: string = '';
+  sucursalId: number | null = null;
   estado: 'ACTIVA' | 'PAUSADA' | 'COMPLETADA' | 'PENDIENTE' | 'EN_PROGRESO' = 'PENDIENTE';
   fechaProgramada: Date | null = null;
   horaInicio: Date | null = null;
@@ -30,16 +34,44 @@ export class CrearActividad implements OnInit {
     { label: 'Completada', value: 'COMPLETADA' }
   ];
 
+  sucursalesDisponibles: Sucursal[] = [];
+
   constructor(
     private router: Router,
     private location: Location,
     private actividadesService: ActividadesService,
-    private messageService: MessageService
+    private messageService: MessageService,
+    private sucursalesService: SucursalesService
   ) {}
 
   ngOnInit(): void {
-    // Componente de creación, no necesita cargar datos
+    this.cargarSucursales();
   }
+
+   cargarSucursales(): void {
+      this.isLoading = true;
+  
+      forkJoin({
+        sucursalesDisponibles: this.sucursalesService.obtenerTodas()
+      }).subscribe({
+        next: (result) => {
+          if (isSuccess(result.sucursalesDisponibles) && result.sucursalesDisponibles.data) {
+            this.sucursalesDisponibles = result.sucursalesDisponibles.data;
+          }
+          this.isLoading = false;
+        },
+        
+        error: (error) => {
+          this.messageService.add({
+            severity: 'error',
+            summary: 'Error',
+            detail: 'Error al cargar los catálogos',
+            life: 3000
+          });
+          this.isLoading = false;
+        }
+      });
+    }
 
   guardar(): void {
     // Validaciones
@@ -68,7 +100,7 @@ export class CrearActividad implements OnInit {
     // Construir el request
     const request: CrearActividadRequest = {
       nombre: this.titulo.trim(),
-      sucursal_id: 1, // TODO: Obtener del selector de sucursales
+      sucursal_id: this.sucursalId ?? 1,
       fecha_inicio: this.formatearFecha(this.fechaProgramada),
       fecha_fin: this.formatearFecha(this.fechaProgramada),
       titulo: this.titulo.trim(),
@@ -80,9 +112,7 @@ export class CrearActividad implements OnInit {
       request.descripcion = this.descripcion.trim();
     }
 
-    if (this.sucursal?.trim()) {
-      request.sucursal = this.sucursal.trim();
-    }
+    // Nota: ya enviamos sucursal_id numérico; el campo `sucursal` como texto ya no es necesario
 
     // Fecha programada - formato YYYY-MM-DD
     if (this.fechaProgramada) {
@@ -143,6 +173,7 @@ export class CrearActividad implements OnInit {
   }
 
   get puedeGuardar(): boolean {
-    return !!(this.titulo && this.titulo.trim().length >= 5 && this.fechaProgramada);
+    const tieneSucursalSeleccionada = this.sucursalesDisponibles.length > 0 ? !!this.sucursalId : true;
+    return !!(this.titulo && this.titulo.trim().length >= 5 && this.fechaProgramada && tieneSucursalSeleccionada);
   }
 }
