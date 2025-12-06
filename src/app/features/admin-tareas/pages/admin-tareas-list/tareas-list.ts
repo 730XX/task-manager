@@ -1,13 +1,16 @@
-import { Component, OnInit, OnDestroy } from '@angular/core';
+import { Component, OnInit, OnDestroy, HostListener, ElementRef } from '@angular/core';
 import { Router } from '@angular/router';
-import { TareasService } from '../../../usuario-tareas/services/tareas.service';
-import { Tarea, ResumenTareas } from '../../../usuario-tareas/models/tarea.model';
-import { Subscription } from 'rxjs';
-// Servicio real del backend
-import { TareasService as TareasApiService, Tarea as TareaBackend } from '../../../../core/services/tareas.service';
-import { ActividadesService, Actividad } from '../../../../core/services/actividades.service';
+import { TareasService } from '../../../../core/services/tareas.service';
+import { TareaUI, ResumenTareasUI, tareaAUI, Tarea } from '../../../../core/interfaces/tarea.interface';
+import { isSuccess } from '../../../../core/interfaces/api-response.interface';
+import { Subscription, forkJoin } from 'rxjs';
+import { ActividadesService } from '../../../../core/services/actividades.service';
+import { Actividad } from '../../../../core/interfaces/actividad.interface';
 import { AuthService } from '../../../../core/services/auth.service';
 import { MessageService } from 'primeng/api';
+import { CategoriasService } from '../../../../core/services/categorias.service';
+import { Categoria } from '../../../../core/interfaces/categoria.interface';
+import { Subcategoria } from '../../../../core/interfaces/subcategoria.interface';
 
 @Component({
   selector: 'app-tareas-list',
@@ -20,11 +23,13 @@ export class TareasList implements OnInit, OnDestroy {
   searchTerm: string = '';
   diaSeleccionado: Date = new Date();
   
-  tareasMisTareas: Tarea[] = [];
-  tareasSinAsignar: Tarea[] = [];
+  tareasMisTareas: TareaUI[] = [];
+  tareasSinAsignar: TareaUI[] = [];
   actividades: Actividad[] = [];
+  categorias: Categoria[] = [];
+  subcategorias: Subcategoria[] = [];
   tareasSeleccionadas: Set<string> = new Set();
-  resumen: ResumenTareas = {
+  resumen: ResumenTareasUI = {
     totalTareas: 0,
     tareasCompletadas: 0,
     tareasEnProgreso: 0,
@@ -39,16 +44,28 @@ export class TareasList implements OnInit, OnDestroy {
   modalFiltrosAdminVisible: boolean = false;
   filtrosActivos: any = null;
   
+  // User menu
+  userMenuOpen: boolean = false;
+  
   private subscription: Subscription = new Subscription();
 
   constructor(
     public tareasService: TareasService,
-    private tareasApiService: TareasApiService,
     private actividadesService: ActividadesService,
+    private categoriasService: CategoriasService,
     private authService: AuthService,
     private messageService: MessageService,
-    private router: Router
+    private router: Router,
+    private elementRef: ElementRef
   ) {}
+
+  // Cerrar menú al hacer click fuera
+  @HostListener('document:click', ['$event'])
+  onDocumentClick(event: MouseEvent): void {
+    if (this.userMenuOpen && !this.elementRef.nativeElement.querySelector('.relative')?.contains(event.target)) {
+      this.userMenuOpen = false;
+    }
+  }
 
   ngOnInit(): void {
     this.cargarTareasDelDia();
@@ -56,6 +73,7 @@ export class TareasList implements OnInit, OnDestroy {
   }
 
   cerrarSesion(): void {
+    this.userMenuOpen = false;
     this.messageService.add({
       severity: 'success',
       summary: 'Sesión cerrada',
@@ -64,16 +82,43 @@ export class TareasList implements OnInit, OnDestroy {
     });
     
     // Usar el método logout del AuthService que limpia todo y redirige
-    this.authService.logout().subscribe();
+    this.authService.logout();
   }
 
   ngOnDestroy(): void {
     this.subscription.unsubscribe();
   }
 
+  // ========== User Menu Methods ==========
+  toggleUserMenu(): void {
+    this.userMenuOpen = !this.userMenuOpen;
+  }
+
+  getUserName(): string {
+    return this.authService.currentUserValue?.nombre_completo || 'Usuario';
+  }
+
+  getInitials(): string {
+    const nombre = this.getUserName();
+    const partes = nombre.split(' ');
+    if (partes.length >= 2) {
+      return (partes[0][0] + partes[1][0]).toUpperCase();
+    }
+    return nombre.substring(0, 2).toUpperCase();
+  }
+
+  getUserRol(): string {
+    const rolId = this.authService.getUserRolId();
+    return rolId === 1 ? 'Administrador' : 'Usuario';
+  }
+
+  isAdmin(): boolean {
+    return this.authService.isAdmin();
+  }
+
   private suscribirACambios(): void {
     this.subscription.add(
-      this.tareasService.subtareasActualizadas$.subscribe(() => {
+      this.tareasService.tareasActualizadas$.subscribe(() => {
         this.cargarTareasDelDia();
       })
     );
@@ -82,13 +127,40 @@ export class TareasList implements OnInit, OnDestroy {
   cargarTareasDelDia(): void {
     this.isLoading = true;
     
+    // Primero cargar categorías y subcategorías, luego las tareas
+    forkJoin({
+      categorias: this.categoriasService.obtenerTodas(),
+      subcategorias: this.categoriasService.obtenerSubcategorias()
+    }).subscribe({
+      next: (result) => {
+        if (isSuccess(result.categorias) && result.categorias.data) {
+          this.categorias = result.categorias.data;
+        }
+        if (isSuccess(result.subcategorias) && result.subcategorias.data) {
+          this.subcategorias = result.subcategorias.data;
+        }
+        // Ahora cargar las tareas (con categorías ya disponibles)
+        this.cargarTareas();
+      },
+      error: (error) => {
+        console.error('Error al cargar categorías:', error);
+        // Cargar tareas aunque fallen las categorías
+        this.cargarTareas();
+      }
+    });
+
+    // Cargar ACTIVIDADES desde el backend real
+    this.cargarActividades();
+  }
+
+  private cargarTareas(): void {
     // Cargar MIS TAREAS desde el backend real
     this.subscription.add(
-      this.tareasApiService.getMisTareas().subscribe({
+      this.tareasService.obtenerMisTareas().subscribe({
         next: (response) => {
-          if (response.tipo === 1 && response.data.tareas) {
+          if (isSuccess(response) && response.data) {
             // Convertir tareas del backend al formato del frontend
-            this.tareasMisTareas = this.convertirTareasBackend(response.data.tareas);
+            this.tareasMisTareas = this.convertirTareasBackend(response.data);
             this.calcularResumen();
           }
           this.isLoading = false;
@@ -105,12 +177,12 @@ export class TareasList implements OnInit, OnDestroy {
       })
     );
 
-    // Cargar TAREAS DISPONIBLES desde el backend real
+    // Cargar TAREAS SIN ASIGNAR desde el backend real
     this.subscription.add(
-      this.tareasApiService.getTareasDisponibles().subscribe({
+      this.tareasService.obtenerTareasSinAsignar().subscribe({
         next: (response) => {
-          if (response.tipo === 1 && response.data.tareas) {
-            this.tareasSinAsignar = this.convertirTareasBackend(response.data.tareas);
+          if (isSuccess(response) && response.data) {
+            this.tareasSinAsignar = this.convertirTareasBackend(response.data);
           }
         },
         error: (error) => {
@@ -118,17 +190,14 @@ export class TareasList implements OnInit, OnDestroy {
         }
       })
     );
-
-    // Cargar ACTIVIDADES desde el backend real
-    this.cargarActividades();
   }
 
   cargarActividades(): void {
     this.subscription.add(
-      this.actividadesService.getActividades().subscribe({
+      this.actividadesService.obtenerTodas().subscribe({
         next: (response) => {
-          if (response.tipo === 1 && response.data.actividades) {
-            this.actividades = response.data.actividades;
+          if (isSuccess(response) && response.data) {
+            this.actividades = response.data;
           }
         },
         error: (error) => {
@@ -138,38 +207,63 @@ export class TareasList implements OnInit, OnDestroy {
     );
   }
 
-  /**
-   * Convierte tareas del formato backend al formato del frontend
-   */
-  private convertirTareasBackend(tareasBackend: TareaBackend[]): Tarea[] {
-    return tareasBackend.map(tb => ({
-      id: tb.tareas_id.toString(),
-      titulo: tb.tareas_titulo,
-      descripcion: tb.tareas_descripcion || '',
-      completada: tb.tareas_estado === 'COMPLETADA',
-      estado: this.mapearEstado(tb.tareas_estado),
-      estadodetarea: 'Activo',
-      progreso: tb.tareas_estado === 'COMPLETADA' ? 100 : (tb.tareas_estado === 'EN_PROGRESO' ? 50 : 0),
-      Prioridad: tb.tareas_prioridad as 'Alta' | 'Media' | 'Baja',
-      Categoria: tb.categoria_nombre || 'Sin categoría',
-      fechaAsignacion: tb.tareas_fecha_programada,
-      fechaAsignacionTimestamp: new Date(tb.tareas_fecha_programada).getTime(),
-      fechaVencimiento: tb.tareas_fecha_programada,
-      horainicio: '',
-      horafin: '',
-      totalSubtareas: 0,
-      subtareasCompletadas: 0,
-      usuarioasignado: tb.usuarios_id ? 'Usuario' : undefined
-    }));
+  get actividadesFiltradas(): Actividad[] {
+    let resultado = this.actividades;
+
+    // Filtro por búsqueda
+    if (this.searchTerm) {
+      resultado = resultado.filter(actividad => 
+        (actividad.nombre || actividad.actividades_titulo || '').toLowerCase().includes(this.searchTerm.toLowerCase()) ||
+        (actividad.descripcion || actividad.actividades_descripcion || '').toLowerCase().includes(this.searchTerm.toLowerCase())
+      );
+    }
+
+    // Aplicar filtros adicionales si existen
+    if (this.filtrosActivos && this.filtrosActivos.filtrosAplicados) {
+      // Filtro por sucursal/departamento (usa sucursal_id o actividades_sucursal)
+      if (this.filtrosActivos.departamento && this.filtrosActivos.departamento !== 'Todas') {
+        resultado = resultado.filter(actividad => 
+          (actividad.sucursal || '') === this.filtrosActivos.departamento
+        );
+      }
+
+      // Filtro por categoría
+      if (this.filtrosActivos.categoria && this.filtrosActivos.categoria !== 'Todas') {
+        resultado = resultado.filter(actividad => 
+          (actividad.categoria || '') === this.filtrosActivos.categoria
+        );
+      }
+
+      // Filtro por progreso/estado
+      if (this.filtrosActivos.progreso && this.filtrosActivos.progreso !== 'Todos') {
+        resultado = resultado.filter(actividad => {
+          const progreso = actividad.progreso_porcentaje || 0;
+          if (this.filtrosActivos.progreso === 'Completada') return progreso === 100;
+          if (this.filtrosActivos.progreso === 'En progreso') return progreso > 0 && progreso < 100;
+          if (this.filtrosActivos.progreso === 'Pendiente') return progreso === 0;
+          return true;
+        });
+      }
+    }
+
+    return resultado;
   }
 
-  private mapearEstado(estadoBackend: string): 'Pendiente' | 'En progreso' | 'Completada' | 'Cerrada' | 'Activo' | 'Inactiva' {
-    switch (estadoBackend) {
-      case 'PENDIENTE': return 'Pendiente';
-      case 'EN_PROGRESO': return 'En progreso';
-      case 'COMPLETADA': return 'Completada';
-      default: return 'Pendiente';
-    }
+  /**
+   * Convierte tareas del formato backend al formato del frontend usando tareaAUI
+   */
+  private convertirTareasBackend(tareasBackend: Tarea[]): TareaUI[] {
+    return tareasBackend.map(tb => {
+      // Buscar nombre de categoría
+      const categoria = this.categorias.find(c => c.id === tb.categoria_id);
+      const categoriaNombre = categoria?.nombre || 'Sin categoría';
+      
+      // Buscar nombre de subcategoría
+      const subcategoria = this.subcategorias.find(s => s.id === tb.subcategoria_id);
+      const subcategoriaNombre = subcategoria?.nombre || undefined;
+      
+      return tareaAUI(tb, categoriaNombre, subcategoriaNombre);
+    });
   }
 
   private calcularResumen(): void {
@@ -185,17 +279,51 @@ export class TareasList implements OnInit, OnDestroy {
     };
   }
 
-  get tareasFiltradas(): Tarea[] {
+  get tareasFiltradas(): TareaUI[] {
     const tareas = this.selectedTab === 'mis-tareas' ? this.tareasMisTareas : this.tareasSinAsignar;
     
-    if (!this.searchTerm) {
-      return tareas;
+    let resultado = tareas;
+
+    // Filtro por búsqueda
+    if (this.searchTerm) {
+      resultado = resultado.filter(tarea => 
+        tarea.titulo.toLowerCase().includes(this.searchTerm.toLowerCase()) ||
+        tarea.Categoria.toLowerCase().includes(this.searchTerm.toLowerCase())
+      );
     }
 
-    return tareas.filter(tarea => 
-      tarea.titulo.toLowerCase().includes(this.searchTerm.toLowerCase()) ||
-      tarea.Categoria.toLowerCase().includes(this.searchTerm.toLowerCase())
-    );
+    // Aplicar filtros adicionales si existen
+    if (this.filtrosActivos && this.filtrosActivos.filtrosAplicados) {
+      // Filtro por prioridad
+      if (this.filtrosActivos.prioridad && this.filtrosActivos.prioridad !== 'Todos') {
+        resultado = resultado.filter(tarea => 
+          tarea.Prioridad === this.filtrosActivos.prioridad
+        );
+      }
+
+      // Filtro por categoría
+      if (this.filtrosActivos.categoria && this.filtrosActivos.categoria !== 'Todas') {
+        resultado = resultado.filter(tarea => 
+          tarea.Categoria === this.filtrosActivos.categoria
+        );
+      }
+
+      // Filtro por estado/progreso
+      if (this.filtrosActivos.progreso && this.filtrosActivos.progreso !== 'Todos') {
+        resultado = resultado.filter(tarea => 
+          tarea.estado === this.filtrosActivos.progreso
+        );
+      }
+
+      // Filtro por categorías múltiples (modo lista - sin asignar)
+      if (this.filtrosActivos.categorias && this.filtrosActivos.categorias.length > 0 && !this.filtrosActivos.todasCategorias) {
+        resultado = resultado.filter(tarea => 
+          this.filtrosActivos.categorias.includes(tarea.Categoria)
+        );
+      }
+    }
+
+    return resultado;
   }
 
   onSearchInput(event: any): void {
@@ -228,7 +356,7 @@ export class TareasList implements OnInit, OnDestroy {
     let errores = 0;
 
     tareasIds.forEach((tareaId, index) => {
-      this.tareasApiService.asignarTarea(Number(tareaId)).subscribe({
+      this.tareasService.asignarTarea(Number(tareaId)).subscribe({
         next: (response) => {
           completadas++;
           
@@ -301,9 +429,9 @@ export class TareasList implements OnInit, OnDestroy {
 
     // Llamar al backend para completar la tarea
     this.subscription.add(
-      this.tareasApiService.completarTarea(Number(tareaId)).subscribe({
+      this.tareasService.completarTarea(Number(tareaId)).subscribe({
         next: (response) => {
-          if (response.tipo === 1) {
+          if (isSuccess(response)) {
             this.messageService.add({
               severity: 'success',
               summary: '¡Tarea completada!',
@@ -348,8 +476,24 @@ export class TareasList implements OnInit, OnDestroy {
     this.filtrosActivos = filtros;
     this.modalFiltrosVisible = false;
     this.modalFiltrosAdminVisible = false;
-    // Aquí se pueden aplicar los filtros a las listas
-    console.log('Filtros aplicados:', filtros);
+    
+    // Mostrar mensaje de éxito
+    this.messageService.add({
+      severity: 'success',
+      summary: 'Filtros aplicados',
+      detail: 'Los filtros se han aplicado correctamente',
+      life: 2000
+    });
+  }
+
+  limpiarFiltrosActivos(): void {
+    this.filtrosActivos = null;
+    this.messageService.add({
+      severity: 'info',
+      summary: 'Filtros limpiados',
+      detail: 'Se han removido todos los filtros',
+      life: 2000
+    });
   }
 
   crearNuevaTarea(): void {

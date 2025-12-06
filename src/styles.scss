@@ -1,51 +1,202 @@
 /* You can add global styles to this file, and also import other style files */
 @import "tailwindcss";
 
-/* Estilos para PrimeNG Select */
-:root {
-  --p-select-color: #1f2937;
-  --p-select-option-color: #1f2937;
-}
+/* ============================================
+   PRIMENG LIGHT MODE - GLOBAL OVERRIDES
+   ============================================ */
 
+/* Select - Modo Claro Global */
 .p-select {
+  background: white !important;
+  border: 1px solid #cbd5e1 !important;
+  
   .p-select-label {
-    color: #edeff2 !important;
+    color: #1e293b !important;
     font-size: 0.875rem;
   }
 
-  .p-select-option {
-    color: #edeff2 !important;
-  }
-
   .p-select-label.p-placeholder {
-    color: #9ca3af !important;
+    color: #94a3b8 !important;
+  }
+  
+  .p-select-dropdown {
+    color: #64748b !important;
+  }
+  
+  &:hover {
+    border-color: #94a3b8 !important;
+  }
+  
+  &:focus,
+  &.p-focus {
+    border-color: #3b82f6 !important;
+    box-shadow: 0 0 0 1px #3b82f6 !important;
   }
 }
 
-.p-select-overlay {
-  .p-select-option {
-    color: #edeff2 !important;
-  }
+/* Select Overlay/Dropdown - Modo Claro Global */
+.p-select-overlay,
+.p-select-panel {
+  background: white !important;
+  border: 1px solid #e2e8f0 !important;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1) !important;
 
-  .p-select-option:hover {
-    background-color: #f3f4f6 !important;
+  .p-select-option,
+  .p-select-item {
+    color: #1e293b !important;
+    background: white !important;
+
+    &:hover,
+    &.p-highlight {
+      background: #f1f5f9 !important;
+      color: #1e293b !important;
+    }
+
+    &.p-focus {
+      background: #e0f2fe !important;
+    }
+  }
+  
+  .p-select-empty-message {
+    color: #64748b !important;
   }
 }
 
+/* DatePicker - Modo Claro Global */
 .p-datepicker {
-  .p-datepicker-input-icon-container input {
-    color: #edeff2 !important;
+  background: white !important;
+  border: 1px solid #cbd5e1 !important;
+  
+  input,
+  .p-inputtext {
+    color: #1e293b !important;
+    background: white !important;
+    
+    &::placeholder {
+      color: #94a3b8 !important;
+    }
+  }
+  
+  .p-datepicker-trigger {
+    color: #64748b !important;
+    background: transparent !important;
+    
+    &:hover {
+      color: #3b82f6 !important;
+    }
   }
 }
 
-.p-dialog {
-  .p-dialog-header,
-  .p-dialog-content {
-    color: #edeff2;
+/* DatePicker Panel/Overlay - Modo Claro Global */
+.p-datepicker-panel,
+.p-datepicker-overlay {
+  background: white !important;
+  color: #000000 !important;
+  border: 1px solid #e2e8f0 !important;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1) !important;
+  
+  .p-datepicker-header {
+    background: white !important;
+    border-bottom: 1px solid #e2e8f0 !important;
+    
+    .p-datepicker-title {
+      color: #1e293b !important;
+      
+      button,
+      .p-datepicker-month,
+      .p-datepicker-year {
+        color: #1e293b !important;
+        
+        &:hover {
+          color: #3b82f6 !important;
+        }
+      }
+    }
+    
+    .p-datepicker-prev,
+    .p-datepicker-next {
+      color: #64748b !important;
+      
+      &:hover {
+        color: #3b82f6 !important;
+        background: #f1f5f9 !important;
+      }
+    }
+  }
+  
+  .p-datepicker-calendar {
+    th {
+      color: #64748b !important;
+    }
+    
+    td {
+      span,
+      .p-datepicker-day {
+        color: #1e293b !important;
+        
+        &:hover {
+          background: #f1f5f9 !important;
+        }
+        
+        &.p-highlight,
+        &.p-datepicker-today {
+          background: #3b82f6 !important;
+          color: white !important;
+        }
+      }
+      
+      &.p-datepicker-other-month span {
+        color: #94a3b8 !important;
+      }
+    }
+  }
+  
+  /* TimePicker dentro del DatePicker */
+  .p-timepicker {
+    border-top: 1px solid #e2e8f0 !important;
+    
+    span {
+      color: #1e293b !important;
+    }
+    
+    button {
+      color: #64748b !important;
+      
+      &:hover {
+        color: #3b82f6 !important;
+        background: #f1f5f9 !important;
+      }
+    }
+    
+    .p-separator {
+      color: #64748b !important;
+    }
+    
+    input {
+      color: #1e293b !important;
+      background: white !important;
+    }
+  }
+  
+  /* Month/Year Picker */
+  .p-monthpicker,
+  .p-yearpicker {
+    .p-monthpicker-month,
+    .p-yearpicker-year {
+      color: #1e293b !important;
+      
+      &:hover {
+        background: #f1f5f9 !important;
+      }
+      
+      &.p-highlight {
+        background: #3b82f6 !important;
+        color: white !important;
+      }
+    }
   }
 }
 
-/* Asegurar que los select sean visibles */
 p-select {
   display: block;
   width: 100%;
@@ -54,6 +205,89 @@ p-select {
 p-datepicker {
   display: block;
   width: 100%;
+}
+
+/* ============================================
+   INPUTS GLOBALES - Modo Claro
+   ============================================ */
+
+/* Inputs de texto y textarea globales */
+input.p-inputtext,
+.p-inputtext,
+textarea.p-inputtextarea,
+textarea[pInputTextarea],
+input[pInputText] {
+  background: white !important;
+  color: #1e293b !important;
+  border: 1px solid #cbd5e1 !important;
+  
+  &::placeholder {
+    color: #94a3b8 !important;
+  }
+  
+  &:focus,
+  &:enabled:focus {
+    border-color: #3b82f6 !important;
+    box-shadow: 0 0 0 1px #3b82f6 !important;
+  }
+  
+  &:disabled {
+    background: #f1f5f9 !important;
+    color: #64748b !important;
+  }
+}
+
+/* TimePicker - Forzar texto negro en las horas */
+.p-datepicker .p-timepicker,
+.p-datepicker-panel .p-timepicker,
+.p-datepicker-overlay .p-timepicker {
+  span,
+  input,
+  .p-hour-picker span,
+  .p-minute-picker span,
+  .p-second-picker span,
+  .p-ampm-picker span {
+    color: #1e293b !important;
+  }
+  
+  input.p-inputtext {
+    color: #1e293b !important;
+    background: white !important;
+    text-align: center;
+  }
+  
+  button {
+    color: #64748b !important;
+    
+    &:hover {
+      color: #3b82f6 !important;
+      background: #f1f5f9 !important;
+    }
+  }
+  
+  .p-separator span {
+    color: #1e293b !important;
+  }
+}
+
+/* InputNumber - Modo Claro */
+.p-inputnumber {
+  input {
+    background: white !important;
+    color: #1e293b !important;
+    border: 1px solid #cbd5e1 !important;
+  }
+  
+  .p-inputnumber-button {
+    background: #f1f5f9 !important;
+    color: #64748b !important;
+    border-color: #cbd5e1 !important;
+    
+    &:hover {
+      background: #e2e8f0 !important;
+      color: #1e293b !important;
+    }
+  }
 }
 
 

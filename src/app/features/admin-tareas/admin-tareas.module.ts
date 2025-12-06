@@ -6,6 +6,10 @@ import { FormsModule } from '@angular/forms';
 import { AdminTareasRoutingModule } from './admin-tareas.routing';
 import { MessageService } from 'primeng/api';
 import { ToastModule } from 'primeng/toast';
+import { TooltipModule } from 'primeng/tooltip';
+
+// Lucide Icons
+import { LucideAngularModule, ListTodo, FolderKanban, Plus, Filter, LogOut, Settings, Folder, FolderOpen, Building2, Pencil, X, Check, RefreshCw, ArrowLeft, CheckSquare, ChevronDown, Clock, Loader, CheckCircle, Search, Users, RotateCcw, Info } from 'lucide-angular';
 
 // PrimeNG Components
 import { Dialog } from 'primeng/dialog';
@@ -23,6 +27,8 @@ import { CrearActividad } from './pages/crear-actividad/crear-actividad';
 import { EditarActividad } from './pages/editar-actividad/editar-actividad';
 import { TareasDetail } from './pages/actividad-detail/tareas-detail';
 import { SubtareaDetail } from './pages/tarea-detail/subtarea-detail';
+import { Configuracion } from './pages/configuracion/configuracion';
+import { ReabrirTareaModal } from './pages/tarea-detail/reabrir-tarea-modal/reabrir-tarea-modal';
 
 // Shared components
 import { ComponentsModule } from '../usuario-tareas/components/components-module';
@@ -35,7 +41,9 @@ import { ComponentsModule } from '../usuario-tareas/components/components-module
     CrearActividad,
     EditarActividad,
     TareasDetail,
-    SubtareaDetail
+    SubtareaDetail,
+    Configuracion,
+    ReabrirTareaModal
   ],
   imports: [
     CommonModule,
@@ -43,6 +51,7 @@ import { ComponentsModule } from '../usuario-tareas/components/components-module
     HttpClientModule,
     FormsModule,
     ToastModule,
+    TooltipModule,
     Dialog,
     Select,
     Button,
@@ -50,7 +59,8 @@ import { ComponentsModule } from '../usuario-tareas/components/components-module
     DatePicker,
     InputText,
     ComponentsModule,
-    AdminTareasRoutingModule
+    AdminTareasRoutingModule,
+    LucideAngularModule.pick({ ListTodo, FolderKanban, Plus, Filter, LogOut, Settings, Folder, FolderOpen, Building2, Pencil, X, Check, RefreshCw, ArrowLeft, CheckSquare, ChevronDown, Clock, Loader, CheckCircle, Search, Users, RotateCcw, Info })
   ],
   providers: [
     MessageService

@@ -2,9 +2,27 @@ import { Component, OnInit } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { Location } from '@angular/common';
 import { TareasService } from '../../../../core/services/tareas.service';
-import { TareaAdminClass, Tarea } from '../../../usuario-tareas/models/tarea.model';
-import { ActividadesService, Actividad } from '../../../../core/services/actividades.service';
+import { TareaUI, tareaAUI, Tarea } from '../../../../core/interfaces/tarea.interface';
+import { ActividadesService } from '../../../../core/services/actividades.service';
+import { SucursalesService } from '../../../../core/services/sucursales.service';
+import { Actividad } from '../../../../core/interfaces/actividad.interface';
+import { isSuccess } from '../../../../core/interfaces/api-response.interface';
 import { MessageService } from 'primeng/api';
+import { forkJoin } from 'rxjs';
+
+// Clase auxiliar para el componente (reemplaza TareaAdminClass del modelo anterior)
+interface TareaAdmin {
+  id: string;
+  titulo: string;
+  estado: 'Pendiente' | 'En progreso' | 'Pausada' | 'Completada';
+  Categoria: string;
+  fechaAsignacion: string;
+  horaprogramada: string;
+  horainicio: string;
+  horafin: string;
+  sucursal: string;
+  Tarea: TareaUI[];
+}
 
 @Component({
   selector: 'app-tareas-detail',
@@ -13,7 +31,7 @@ import { MessageService } from 'primeng/api';
   styleUrl: './tareas-detail.scss',
 })
 export class TareasDetail implements OnInit {
-  tareaAdminSeleccionada: TareaAdminClass | null = null;
+  tareaAdminSeleccionada: TareaAdmin | null = null;
   actividadBackend: Actividad | null = null;
   tareasBackend: any[] = [];
   searchTerm: string = '';
@@ -31,6 +49,7 @@ export class TareasDetail implements OnInit {
     private location: Location,
     public tareasService: TareasService,
     private actividadesService: ActividadesService,
+    private sucursalesService: SucursalesService,
     private messageService: MessageService
   ) {}
 
@@ -41,37 +60,82 @@ export class TareasDetail implements OnInit {
     }
   }
 
+  /**
+   * Formatea fecha completa: "05 Dic 2025, 10:30 AM"
+   */
+  private formatearFechaCompleta(fechaStr: string): string {
+    if (!fechaStr) return '--:--';
+    
+    const mesesCortos = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 
+                         'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+    
+    // Puede venir como "2025-12-04 10:00:00"
+    const partes = fechaStr.split(' ');
+    const soloFecha = partes[0];
+    const [year, month, day] = soloFecha.split('-');
+    
+    const mesNombre = mesesCortos[parseInt(month, 10) - 1] || month;
+    let resultado = `${parseInt(day, 10)} ${mesNombre} ${year}`;
+    
+    // Agregar hora si existe
+    if (partes.length > 1) {
+      const hora24 = partes[1].substring(0, 5);
+      const [horaStr, minutos] = hora24.split(':');
+      let hora = parseInt(horaStr, 10);
+      const periodo = hora >= 12 ? 'PM' : 'AM';
+      hora = hora % 12 || 12;
+      resultado += `, ${hora}:${minutos} ${periodo}`;
+    }
+    
+    return resultado;
+  }
+
   cargarTarea(id: string): void {
     this.isLoading = true;
     
     // Cargar detalles de la actividad
-    this.actividadesService.getActividadPorId(Number(id)).subscribe({
-      next: (response) => {
-        if (response.tipo === 1 && response.data.actividad) {
-          this.actividadBackend = response.data.actividad;
+    this.actividadesService.obtenerPorId(Number(id)).subscribe({
+      next: (response: any) => {
+        if (isSuccess(response) && response.data) {
+          this.actividadBackend = response.data;
+          const act = this.actividadBackend!;
+          
           this.progresoGeneral = {
-            total: this.actividadBackend.total_tareas || 0,
-            completadas: this.actividadBackend.tareas_completadas || 0,
-            porcentaje: this.actividadBackend.progreso_porcentaje || 0
+            total: act.total_tareas || 0,
+            completadas: act.tareas_completadas || 0,
+            porcentaje: act.progreso_porcentaje || 0
           };
           
           // Crear objeto compatible con el template
-          this.tareaAdminSeleccionada = new TareaAdminClass({
-            id: this.actividadBackend.actividades_id.toString(),
-            titulo: this.actividadBackend.actividades_titulo,
-            estado: this.mapearEstadoActividad(this.actividadBackend.actividades_estado),
+          this.tareaAdminSeleccionada = {
+            id: act.id.toString(),
+            titulo: act.nombre,
+            estado: this.mapearEstadoActividad(act.actividades_estado || 'ACTIVA'),
             Categoria: 'Actividad',
-            fechaAsignacion: this.actividadBackend.actividades_creado,
+            fechaAsignacion: act.fecha_inicio || '',
             horaprogramada: '',
-            horainicio: '',
-            horafin: '',
-            sucursal: '',
+            horainicio: this.formatearFechaCompleta(act.fecha_inicio || ''),
+            horafin: this.formatearFechaCompleta(act.fecha_fin || ''),
+            sucursal: 'Cargando...',
             Tarea: []
-          });
+          };
+          
+          // Cargar nombre de sucursal si existe sucursal_id
+          if (act.sucursal_id) {
+            this.cargarSucursal(Number(act.sucursal_id));
+          } else {
+            if (this.tareaAdminSeleccionada) {
+              this.tareaAdminSeleccionada.sucursal = 'Sin sucursal';
+            }
+          }
+          
+          // Cargar tareas de la actividad
+          this.cargarTareasDeActividad(id);
+        } else {
+          this.isLoading = false;
         }
-        this.isLoading = false;
       },
-      error: (error) => {
+      error: (error: any) => {
         this.messageService.add({
           severity: 'error',
           summary: 'Error',
@@ -82,21 +146,39 @@ export class TareasDetail implements OnInit {
         this.goBack();
       }
     });
+  }
 
-    // Cargar tareas de la actividad
-    this.actividadesService.getTareasDeActividad(Number(id)).subscribe({
+  private cargarSucursal(sucursalId: number): void {
+    this.sucursalesService.obtenerPorId(sucursalId).subscribe({
       next: (response) => {
-        if (response.tipo === 1 && response.data.tareas) {
-          this.tareasBackend = response.data.tareas;
-          
-          // Convertir tareas al formato del frontend
-          if (this.tareaAdminSeleccionada) {
-            this.tareaAdminSeleccionada.Tarea = this.convertirTareasBackend(response.data.tareas);
-          }
+        if (isSuccess(response) && response.data && this.tareaAdminSeleccionada) {
+          this.tareaAdminSeleccionada.sucursal = response.data.nombre || 'Sin nombre';
         }
       },
-      error: (error) => {
+      error: () => {
+        if (this.tareaAdminSeleccionada) {
+          this.tareaAdminSeleccionada.sucursal = 'Error al cargar';
+        }
+      }
+    });
+  }
+
+  private cargarTareasDeActividad(id: string): void {
+    this.actividadesService.obtenerTareasDeActividad(Number(id)).subscribe({
+      next: (response: any) => {
+        if (isSuccess(response) && response.data) {
+          this.tareasBackend = response.data;
+          
+          // Ahora tareaAdminSeleccionada siempre existe
+          if (this.tareaAdminSeleccionada) {
+            this.tareaAdminSeleccionada.Tarea = this.convertirTareasBackend(response.data);
+          }
+        }
+        this.isLoading = false;
+      },
+      error: (error: any) => {
         console.error('Error al cargar tareas de la actividad:', error);
+        this.isLoading = false;
       }
     });
   }
@@ -110,44 +192,8 @@ export class TareasDetail implements OnInit {
     }
   }
 
-  private convertirTareasBackend(tareasBackend: any[]): Tarea[] {
-    return tareasBackend.map(tb => ({
-      id: tb.tareas_id.toString(),
-      titulo: tb.tareas_titulo,
-      descripcion: tb.tareas_descripcion || '',
-      completada: tb.tareas_estado === 'COMPLETADA',
-      estado: this.mapearEstado(tb.tareas_estado),
-      estadodetarea: 'Activo',
-      progreso: tb.tareas_estado === 'COMPLETADA' ? 100 : (tb.tareas_estado === 'EN_PROGRESO' ? 50 : 0),
-      Prioridad: this.mapearPrioridad(tb.tareas_prioridad),
-      Categoria: tb.categoria_nombre || 'Sin categoría',
-      fechaAsignacion: tb.tareas_fecha_programada,
-      fechaAsignacionTimestamp: new Date(tb.tareas_fecha_programada).getTime(),
-      fechaVencimiento: tb.tareas_fecha_programada,
-      horainicio: '',
-      horafin: '',
-      totalSubtareas: 0,
-      subtareasCompletadas: 0,
-      usuarioasignado: tb.usuarios_id ? 'Usuario' : undefined
-    }));
-  }
-
-  private mapearEstado(estadoBackend: string): 'Pendiente' | 'En progreso' | 'Completada' | 'Cerrada' | 'Activo' | 'Inactiva' {
-    switch (estadoBackend) {
-      case 'PENDIENTE': return 'Pendiente';
-      case 'EN_PROGRESO': return 'En progreso';
-      case 'COMPLETADA': return 'Completada';
-      default: return 'Pendiente';
-    }
-  }
-
-  private mapearPrioridad(prioridadBackend: string): 'Alta' | 'Media' | 'Baja' {
-    switch (prioridadBackend) {
-      case 'ALTA': return 'Alta';
-      case 'MEDIA': return 'Media';
-      case 'BAJA': return 'Baja';
-      default: return 'Media';
-    }
+  private convertirTareasBackend(tareasBackend: Tarea[]): TareaUI[] {
+    return tareasBackend.map(tb => tareaAUI(tb));
   }
 
   calcularProgreso(): void {
@@ -162,11 +208,11 @@ export class TareasDetail implements OnInit {
     }
   }
 
-  get tareasCompletadas(): Tarea[] {
+  get tareasCompletadas(): TareaUI[] {
     return this.tareaAdminSeleccionada?.Tarea || [];
   }
 
-  get tareasFiltradas(): Tarea[] {
+  get tareasFiltradas(): TareaUI[] {
     const tareas = this.tareaAdminSeleccionada?.Tarea || [];
     if (!this.searchTerm) return tareas;
     
@@ -175,7 +221,7 @@ export class TareasDetail implements OnInit {
     );
   }
 
-  navegarASubtarea(subtarea: Tarea): void {
+  navegarASubtarea(subtarea: TareaUI): void {
     this.router.navigate(['/tareas/subtarea-info', subtarea.id]);
   }
 

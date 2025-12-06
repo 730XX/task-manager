@@ -1,8 +1,17 @@
 import { Component, OnInit } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { Location } from '@angular/common';
-import { TareasService as TareasApiService, Categoria, Usuario } from '../../../../core/services/tareas.service';
-import { ActividadesService, Actividad } from '../../../../core/services/actividades.service';
+import { TareasService } from '../../../../core/services/tareas.service';
+import { CategoriasService } from '../../../../core/services/categorias.service';
+import { UsuariosService } from '../../../../core/services/usuarios.service';
+import { ActividadesService } from '../../../../core/services';
+import { CargosService } from '../../../../core/services/cargos.service';
+import { Usuario } from '../../../../core/interfaces/usuario.interface';
+import { Actividad } from '../../../../core/interfaces/actividad.interface';
+import { Categoria } from '../../../../core/interfaces/categoria.interface';
+import { Subcategoria } from '../../../../core/interfaces/subcategoria.interface';
+import { Cargo } from '../../../../core/interfaces/cargo.interface';
+import { isSuccess } from '../../../../core/interfaces/api-response.interface';
 import { MessageService } from 'primeng/api';
 import { forkJoin } from 'rxjs';
 
@@ -17,9 +26,23 @@ export class EditarTarea implements OnInit {
   titulo: string = '';
   descripcion: string = '';
   prioridad: 'ALTA' | 'MEDIA' | 'BAJA' = 'MEDIA';
-  fechaProgramada: Date | null = null;
-  categoriaId: number | null = null;
-  usuarioId: number | null = null;
+  
+  // Fechas
+  fechaInicio: Date | null = null;
+  fechaFin: Date | null = null;
+  
+  // Categoría y Subcategoría (strings porque el backend devuelve strings)
+  categoriaId: string | null = null;
+  subcategoriaId: string | null = null;
+  
+  // Asignación (por usuario o por cargo)
+  tipoAsignacion: 'usuario' | 'cargo' | null = null;
+  usuarioId: string | null = null;
+  cargoId: string | null = null;
+  
+  // Actividad
+  actividadId: string | null = null;
+  
   isLoading: boolean = false;
 
   prioridades = [
@@ -28,16 +51,26 @@ export class EditarTarea implements OnInit {
     { label: 'Baja', value: 'BAJA' }
   ];
 
+  tiposAsignacion = [
+    { label: 'Usuario', value: 'usuario' },
+    { label: 'Cargo', value: 'cargo' }
+  ];
+
   categoriasDisponibles: Categoria[] = [];
+  subcategoriasDisponibles: Subcategoria[] = [];
+  subcategoriasFiltradas: Subcategoria[] = [];
   usuariosDisponibles: Usuario[] = [];
+  cargosDisponibles: Cargo[] = [];
   actividadesDisponibles: Actividad[] = [];
-  actividadId: number | null = null;
 
   constructor(
     private route: ActivatedRoute,
     private router: Router,
     private location: Location,
-    private tareasApiService: TareasApiService,
+    private tareasService: TareasService,
+    private categoriasService: CategoriasService,
+    private usuariosService: UsuariosService,
+    private cargosService: CargosService,
     private actividadesService: ActividadesService,
     private messageService: MessageService
   ) {}
@@ -53,38 +86,69 @@ export class EditarTarea implements OnInit {
   cargarCatalogosYTarea(id: string): void {
     this.isLoading = true;
 
-    // Cargar catálogos y tarea en paralelo
+    // Cargar catálogos, tarea y asignación en paralelo
     forkJoin({
-      categorias: this.tareasApiService.getCategorias(),
-      usuarios: this.tareasApiService.getUsuarios(),
-      actividades: this.actividadesService.getActividades(),
-      tarea: this.tareasApiService.getTareaPorId(Number(id))
+      categorias: this.categoriasService.obtenerTodas(),
+      subcategorias: this.categoriasService.obtenerSubcategorias(),
+      usuarios: this.usuariosService.obtenerTodos(),
+      cargos: this.cargosService.obtenerTodos(),
+      actividades: this.actividadesService.obtenerTodas(),
+      tarea: this.tareasService.obtenerPorId(Number(id)),
+      asignacion: this.tareasService.obtenerAsignacion(Number(id))
     }).subscribe({
       next: (result) => {
         // Procesar catálogos
-        if (result.categorias.tipo === 1) {
-          this.categoriasDisponibles = result.categorias.data.categorias;
+        if (isSuccess(result.categorias) && result.categorias.data) {
+          this.categoriasDisponibles = result.categorias.data;
         }
-        if (result.usuarios.tipo === 1) {
-          this.usuariosDisponibles = result.usuarios.data.usuarios;
+        if (isSuccess(result.subcategorias) && result.subcategorias.data) {
+          this.subcategoriasDisponibles = result.subcategorias.data;
         }
-        if (result.actividades.tipo === 1) {
-          this.actividadesDisponibles = result.actividades.data.actividades;
+        if (isSuccess(result.usuarios) && result.usuarios.data) {
+          this.usuariosDisponibles = result.usuarios.data;
+        }
+        if (isSuccess(result.cargos) && result.cargos.data) {
+          this.cargosDisponibles = result.cargos.data;
+        }
+        if (isSuccess(result.actividades) && result.actividades.data) {
+          this.actividadesDisponibles = result.actividades.data;
         }
 
         // Cargar datos de la tarea
-        if (result.tarea.tipo === 1 && result.tarea.data.tarea) {
-          const tarea = result.tarea.data.tarea;
+        if (isSuccess(result.tarea) && result.tarea.data) {
+          const tarea = result.tarea.data;
           
-          this.titulo = tarea.tareas_titulo || '';
-          this.descripcion = tarea.tareas_descripcion || '';
-          this.prioridad = tarea.tareas_prioridad || 'MEDIA';
-          this.categoriaId = tarea.categoria_id || null;
-          this.usuarioId = tarea.usuarios_id || null;
-          this.actividadId = tarea.actividades_id || null;
+          this.titulo = tarea.titulo || '';
+          this.descripcion = tarea.descripcion || '';
+          this.prioridad = (tarea.prioridad?.toUpperCase() as 'ALTA' | 'MEDIA' | 'BAJA') || 'MEDIA';
+          this.categoriaId = tarea.categoria_id ? String(tarea.categoria_id) : null;
+          this.subcategoriaId = tarea.subcategoria_id ? String(tarea.subcategoria_id) : null;
+          this.actividadId = tarea.actividad_id ? String(tarea.actividad_id) : null;
 
-          if (tarea.tareas_fecha_programada) {
-            this.fechaProgramada = new Date(tarea.tareas_fecha_programada);
+          // Filtrar subcategorías según la categoría cargada
+          if (this.categoriaId) {
+            this.filtrarSubcategorias();
+          }
+
+          // Cargar fechas
+          if (tarea.fecha_inicio_programada) {
+            this.fechaInicio = new Date(tarea.fecha_inicio_programada);
+          }
+          if (tarea.fecha_fin_programada) {
+            this.fechaFin = new Date(tarea.fecha_fin_programada);
+          }
+        }
+
+        // Cargar datos de asignación (del nuevo endpoint)
+        if (isSuccess(result.asignacion) && result.asignacion.data) {
+          const asignacion = result.asignacion.data;
+          
+          if (asignacion.usuario_asignado_id) {
+            this.tipoAsignacion = 'usuario';
+            this.usuarioId = String(asignacion.usuario_asignado_id);
+          } else if (asignacion.cargo_asignado_id) {
+            this.tipoAsignacion = 'cargo';
+            this.cargoId = String(asignacion.cargo_asignado_id);
           }
         }
 
@@ -103,6 +167,37 @@ export class EditarTarea implements OnInit {
     });
   }
 
+  /**
+   * Filtra las subcategorías según la categoría seleccionada
+   */
+  filtrarSubcategorias(): void {
+    if (this.categoriaId) {
+      this.subcategoriasFiltradas = this.subcategoriasDisponibles.filter(
+        sub => String(sub.categoria_id) === String(this.categoriaId)
+      );
+    } else {
+      this.subcategoriasFiltradas = [];
+      this.subcategoriaId = null;
+    }
+  }
+
+  /**
+   * Maneja el cambio de categoría
+   */
+  onCategoriaChange(): void {
+    this.subcategoriaId = null; // Limpiar subcategoría al cambiar categoría
+    this.filtrarSubcategorias();
+  }
+
+  /**
+   * Maneja el cambio de tipo de asignación
+   */
+  onTipoAsignacionChange(): void {
+    // Limpiar selecciones previas al cambiar tipo
+    this.usuarioId = null;
+    this.cargoId = null;
+  }
+
   guardar(): void {
     // Validaciones
     if (!this.titulo || this.titulo.trim().length < 3) {
@@ -115,11 +210,32 @@ export class EditarTarea implements OnInit {
       return;
     }
 
-    if (!this.fechaProgramada) {
+    if (!this.fechaInicio) {
       this.messageService.add({
         severity: 'warn',
         summary: 'Campo requerido',
-        detail: 'Debe seleccionar una fecha programada',
+        detail: 'Debe seleccionar una fecha de inicio',
+        life: 3000
+      });
+      return;
+    }
+
+    if (!this.fechaFin) {
+      this.messageService.add({
+        severity: 'warn',
+        summary: 'Campo requerido',
+        detail: 'Debe seleccionar una fecha de fin',
+        life: 3000
+      });
+      return;
+    }
+
+    // Validar que fecha fin sea mayor o igual a fecha inicio
+    if (this.fechaFin < this.fechaInicio) {
+      this.messageService.add({
+        severity: 'warn',
+        summary: 'Error de fechas',
+        detail: 'La fecha de fin debe ser mayor o igual a la fecha de inicio',
         life: 3000
       });
       return;
@@ -127,39 +243,48 @@ export class EditarTarea implements OnInit {
 
     this.isLoading = true;
 
-    // Formatear fecha programada a formato MySQL datetime
-    const fechaStr = this.fechaProgramada.toISOString().slice(0, 19).replace('T', ' ');
+    // Formatear fechas a formato MySQL datetime
+    const fechaInicioStr = this.fechaInicio.toISOString().slice(0, 19).replace('T', ' ');
+    const fechaFinStr = this.fechaFin.toISOString().slice(0, 19).replace('T', ' ');
+
+    // Convertir prioridad a formato del backend (Primera letra mayúscula)
+    const prioridadMap: { [key: string]: string } = {
+      'ALTA': 'Alta',
+      'MEDIA': 'Media',
+      'BAJA': 'Baja'
+    };
 
     const request: any = {
       titulo: this.titulo.trim(),
-      prioridad: this.prioridad,
-      fecha_programada: fechaStr
+      prioridad: prioridadMap[this.prioridad] || 'Media',
+      fecha_inicio: fechaInicioStr,
+      fecha_fin: fechaFinStr
     };
 
     if (this.descripcion?.trim()) {
       request.descripcion = this.descripcion.trim();
     }
-    if (this.categoriaId) {
-      request.categoria_id = this.categoriaId;
-    } else {
-      request.categoria_id = null;
-    }
     
-    if (this.usuarioId) {
-      request.usuarios_id = this.usuarioId;
+    // IDs con los nombres correctos que espera el backend
+    request.categoria_id = this.categoriaId ? Number(this.categoriaId) : 0;
+    request.subcategoria_id = this.subcategoriaId ? Number(this.subcategoriaId) : 0;
+    request.actividad_id = this.actividadId ? Number(this.actividadId) : 0;
+    
+    // Asignación por usuario o cargo (nombres que espera el backend)
+    if (this.tipoAsignacion === 'usuario') {
+      request.usuario_asignado_id = this.usuarioId ? Number(this.usuarioId) : null;
+      request.cargo_asignado_id = null;
+    } else if (this.tipoAsignacion === 'cargo') {
+      request.cargo_asignado_id = this.cargoId ? Number(this.cargoId) : null;
+      request.usuario_asignado_id = null;
     } else {
-      request.usuarios_id = null;
+      request.usuario_asignado_id = null;
+      request.cargo_asignado_id = null;
     }
 
-    if (this.actividadId) {
-      request.actividades_id = this.actividadId;
-    } else {
-      request.actividades_id = null;
-    }
-
-    this.tareasApiService.actualizarTarea(Number(this.tareaId), request).subscribe({
+    this.tareasService.actualizarTarea(Number(this.tareaId), request).subscribe({
       next: (response) => {
-        if (response.tipo === 1) {
+        if (isSuccess(response)) {
           this.messageService.add({
             severity: 'success',
             summary: 'Éxito',
@@ -190,6 +315,6 @@ export class EditarTarea implements OnInit {
   }
 
   get puedeGuardar(): boolean {
-    return !!(this.titulo && this.titulo.trim().length >= 3 && this.fechaProgramada);
+    return !!(this.titulo && this.titulo.trim().length >= 3 && this.fechaInicio && this.fechaFin);
   }
 }

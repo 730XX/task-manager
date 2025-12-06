@@ -5,7 +5,7 @@ import { FormsModule } from '@angular/forms';
 import { UsuarioTareasRoutingModule } from './usuario-tareas-routing.module';
 import { PagesModule } from './pages/pages-module';
 import { ComponentsModule } from './components/components-module';
-import { TareasService } from './services/tareas.service';
+import { TareasService } from '../../core/services/tareas.service';
 import { MessageService } from 'primeng/api';
 import { ToastModule } from 'primeng/toast';
 

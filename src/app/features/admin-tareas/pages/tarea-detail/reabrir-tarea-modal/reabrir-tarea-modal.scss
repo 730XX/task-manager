@@ -1,0 +1,53 @@
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.animate-fadeIn {
+  animation: fadeIn 0.2s ease-out;
+}
+
+:host ::ng-deep {
+  .p-select {
+    width: 100%;
+    
+    .p-select-label {
+      padding: 0.75rem 1rem;
+    }
+  }
+
+  .p-datepicker {
+    width: 100%;
+    
+    .p-inputtext {
+      padding: 0.75rem 1rem;
+      width: 100%;
+    }
+
+    // Mejorar la interacción del calendario
+    .p-datepicker-panel {
+      z-index: 9999 !important;
+    }
+  }
+
+  // Fix para que el calendario responda mejor al click
+  .p-datepicker-input {
+    cursor: pointer !important;
+  }
+
+  .p-inputtextarea {
+    &:focus {
+      box-shadow: none;
+    }
+  }
+
+  // Asegurar que los overlays se muestren correctamente
+  .p-select-overlay,
+  .p-datepicker-overlay {
+    z-index: 9999 !important;
+  }
+}

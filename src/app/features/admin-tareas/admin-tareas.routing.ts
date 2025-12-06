@@ -7,11 +7,16 @@ import { CrearTarea } from './pages/crear-tarea/crear-tarea';
 import { EditarActividad } from './pages/editar-actividad/editar-actividad';
 import { EditarTarea } from './pages/editar-tarea/editar-tarea';
 import { CrearActividad } from './pages/crear-actividad/crear-actividad';
+import { Configuracion } from './pages/configuracion/configuracion';
 
 const routes: Routes = [
   {
     path: '',
     component: TareasList
+  },
+  {
+    path: 'configuracion',
+    component: Configuracion
   },
   {
     path: 'tarea/:id',

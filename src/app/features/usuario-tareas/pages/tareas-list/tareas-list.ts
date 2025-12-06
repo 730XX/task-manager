@@ -1,11 +1,15 @@
-import { Component, OnInit, OnDestroy } from '@angular/core';
+import { Component, OnInit, OnDestroy, HostListener, ElementRef } from '@angular/core';
 import { Router } from '@angular/router';
-import { TareasService } from '../../services/tareas.service';
-import { Tarea, ResumenTareas } from '../../models/tarea.model';
 import { Subscription } from 'rxjs';
-// Servicio real del backend
-import { TareasService as TareasApiService, Tarea as TareaBackend } from '../../../../core/services/tareas.service';
+import { TareasService } from '../../../../core/services/tareas.service';
 import { AuthService } from '../../../../core/services/auth.service';
+import { 
+  Tarea, 
+  TareaUI, 
+  ResumenTareasUI, 
+  tareaAUI 
+} from '../../../../core/interfaces/tarea.interface';
+import { ApiResponse, isSuccess } from '../../../../core/interfaces/api-response.interface';
 import { MessageService } from 'primeng/api';
 
 @Component({
@@ -19,10 +23,10 @@ export class TareasList implements OnInit, OnDestroy {
   searchTerm: string = '';
   diaSeleccionado: Date = new Date();
   
-  tareasMisTareas: Tarea[] = [];
-  tareasSinAsignar: Tarea[] = [];
+  tareasMisTareas: TareaUI[] = [];
+  tareasSinAsignar: TareaUI[] = [];
   tareasSeleccionadas: Set<string> = new Set();
-  resumen: ResumenTareas = {
+  resumen: ResumenTareasUI = {
     totalTareas: 0,
     tareasCompletadas: 0,
     tareasEnProgreso: 0,
@@ -36,15 +40,26 @@ export class TareasList implements OnInit, OnDestroy {
   modalFiltrosVisible: boolean = false;
   filtrosActivos: any = null;
   
+  // User menu
+  userMenuOpen: boolean = false;
+  
   private subscription: Subscription = new Subscription();
 
   constructor(
     public tareasService: TareasService,
-    private tareasApiService: TareasApiService,
     private authService: AuthService,
     private messageService: MessageService,
-    private router: Router
+    private router: Router,
+    private elementRef: ElementRef
   ) {}
+
+  // Cerrar menú al hacer click fuera
+  @HostListener('document:click', ['$event'])
+  onDocumentClick(event: MouseEvent): void {
+    if (this.userMenuOpen && !this.elementRef.nativeElement.querySelector('.relative')?.contains(event.target)) {
+      this.userMenuOpen = false;
+    }
+  }
 
   ngOnInit(): void {
     this.cargarTareasDelDia();
@@ -52,6 +67,7 @@ export class TareasList implements OnInit, OnDestroy {
   }
 
   cerrarSesion(): void {
+    this.userMenuOpen = false;
     this.messageService.add({
       severity: 'success',
       summary: 'Sesión cerrada',
@@ -60,7 +76,30 @@ export class TareasList implements OnInit, OnDestroy {
     });
     
     // Usar el método logout del AuthService que limpia todo y redirige
-    this.authService.logout().subscribe();
+    this.authService.logout();
+  }
+
+  // ========== User Menu Methods ==========
+  toggleUserMenu(): void {
+    this.userMenuOpen = !this.userMenuOpen;
+  }
+
+  getUserName(): string {
+    return this.authService.currentUserValue?.nombre_completo || 'Usuario';
+  }
+
+  getInitials(): string {
+    const nombre = this.getUserName();
+    const partes = nombre.split(' ');
+    if (partes.length >= 2) {
+      return (partes[0][0] + partes[1][0]).toUpperCase();
+    }
+    return nombre.substring(0, 2).toUpperCase();
+  }
+
+  getUserRol(): string {
+    const rolId = this.authService.getUserRolId();
+    return rolId === 1 ? 'Administrador' : 'Usuario';
   }
 
   ngOnDestroy(): void {
@@ -69,7 +108,7 @@ export class TareasList implements OnInit, OnDestroy {
 
   private suscribirACambios(): void {
     this.subscription.add(
-      this.tareasService.subtareasActualizadas$.subscribe(() => {
+      this.tareasService.tareasActualizadas$.subscribe(() => {
         this.cargarTareasDelDia();
       })
     );
@@ -80,11 +119,11 @@ export class TareasList implements OnInit, OnDestroy {
     
     // Cargar MIS TAREAS desde el backend real
     this.subscription.add(
-      this.tareasApiService.getMisTareas().subscribe({
+      this.tareasService.obtenerMisTareas().subscribe({
         next: (response) => {
-          if (response.tipo === 1 && response.data.tareas) {
+          if (isSuccess(response) && response.data) {
             // Convertir tareas del backend al formato del frontend
-            this.tareasMisTareas = this.convertirTareasBackend(response.data.tareas);
+            this.tareasMisTareas = this.convertirTareasBackend(response.data);
             this.calcularResumen();
           }
           this.isLoading = false;
@@ -101,12 +140,12 @@ export class TareasList implements OnInit, OnDestroy {
       })
     );
 
-    // Cargar TAREAS DISPONIBLES desde el backend real
+    // Cargar TAREAS SIN ASIGNAR desde el backend real
     this.subscription.add(
-      this.tareasApiService.getTareasDisponibles().subscribe({
+      this.tareasService.obtenerTareasSinAsignar().subscribe({
         next: (response) => {
-          if (response.tipo === 1 && response.data.tareas) {
-            this.tareasSinAsignar = this.convertirTareasBackend(response.data.tareas);
+          if (isSuccess(response) && response.data) {
+            this.tareasSinAsignar = this.convertirTareasBackend(response.data);
           }
         },
         error: (error) => {
@@ -118,37 +157,10 @@ export class TareasList implements OnInit, OnDestroy {
   }
 
   /**
-   * Convierte tareas del formato backend al formato del frontend
+   * Convierte tareas del formato backend al formato del frontend usando tareaAUI
    */
-  private convertirTareasBackend(tareasBackend: TareaBackend[]): Tarea[] {
-    return tareasBackend.map(tb => ({
-      id: tb.tareas_id.toString(),
-      titulo: tb.tareas_titulo,
-      descripcion: tb.tareas_descripcion || '',
-      completada: tb.tareas_estado === 'COMPLETADA',
-      estado: this.mapearEstado(tb.tareas_estado),
-      estadodetarea: 'Activo',
-      progreso: tb.tareas_estado === 'COMPLETADA' ? 100 : (tb.tareas_estado === 'EN_PROGRESO' ? 50 : 0),
-      Prioridad: tb.tareas_prioridad as 'Alta' | 'Media' | 'Baja',
-      Categoria: tb.categoria_nombre || 'Sin categoría',
-      fechaAsignacion: tb.tareas_fecha_programada,
-      fechaAsignacionTimestamp: new Date(tb.tareas_fecha_programada).getTime(),
-      fechaVencimiento: tb.tareas_fecha_programada,
-      horainicio: '',
-      horafin: '',
-      totalSubtareas: 0,
-      subtareasCompletadas: 0,
-      usuarioasignado: tb.usuarios_id ? 'Usuario' : undefined
-    }));
-  }
-
-  private mapearEstado(estadoBackend: string): 'Pendiente' | 'En progreso' | 'Completada' | 'Cerrada' | 'Activo' | 'Inactiva' {
-    switch (estadoBackend) {
-      case 'PENDIENTE': return 'Pendiente';
-      case 'EN_PROGRESO': return 'En progreso';
-      case 'COMPLETADA': return 'Completada';
-      default: return 'Pendiente';
-    }
+  private convertirTareasBackend(tareasBackend: Tarea[]): TareaUI[] {
+    return tareasBackend.map(tb => tareaAUI(tb));
   }
 
   private calcularResumen(): void {
@@ -164,7 +176,7 @@ export class TareasList implements OnInit, OnDestroy {
     };
   }
 
-  get tareasFiltradas(): Tarea[] {
+  get tareasFiltradas(): TareaUI[] {
     const tareas = this.selectedTab === 'mis-tareas' ? this.tareasMisTareas : this.tareasSinAsignar;
     
     if (!this.searchTerm) {
@@ -207,7 +219,7 @@ export class TareasList implements OnInit, OnDestroy {
     let errores = 0;
 
     tareasIds.forEach((tareaId, index) => {
-      this.tareasApiService.asignarTarea(Number(tareaId)).subscribe({
+      this.tareasService.asignarTarea(Number(tareaId)).subscribe({
         next: (response) => {
           completadas++;
           
@@ -280,9 +292,9 @@ export class TareasList implements OnInit, OnDestroy {
 
     // Llamar al backend para completar la tarea
     this.subscription.add(
-      this.tareasApiService.completarTarea(Number(tareaId)).subscribe({
+      this.tareasService.completarTarea(Number(tareaId)).subscribe({
         next: (response) => {
-          if (response.tipo === 1) {
+          if (isSuccess(response)) {
             this.messageService.add({
               severity: 'success',
               summary: '¡Tarea completada!',

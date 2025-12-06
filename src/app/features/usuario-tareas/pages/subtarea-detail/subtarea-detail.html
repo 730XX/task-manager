@@ -41,6 +41,7 @@
               [ngClass]="{
                 'bg-yellow-500 text-white': tarea?.estado === 'Pendiente',
                 'bg-blue-500 text-white': tarea?.estado === 'En progreso',
+                'bg-orange-500 text-white': tarea?.estado === 'Pausada',
                 'bg-green-500 text-white': tarea?.estado === 'Completada',
                 'bg-gray-400 text-white': tarea?.estado === 'Cerrada'
               }">
@@ -153,11 +154,11 @@
 
     <!-- Botones de acción -->
     <div class="flex gap-3 mt-6">
-      <button *ngIf="tarea?.estado === 'Pendiente'"
+      <button *ngIf="tarea?.estado === 'Pendiente' || tarea?.estado === 'Pausada'"
               class="flex-1 px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
               (click)="iniciarTarea()">
         <i class="pi pi-play mr-2"></i>
-        Iniciar Tarea
+        {{tarea?.estado === 'Pausada' ? 'Reanudar Tarea' : 'Iniciar Tarea'}}
       </button>
 
       <button *ngIf="tarea?.estado === 'En progreso'"

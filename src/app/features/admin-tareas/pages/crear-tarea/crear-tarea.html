@@ -1,184 +1,253 @@
 <div class="min-h-screen bg-gray-50">
-  <!-- Toast para mensajes -->
+  <!-- Toast -->
   <p-toast></p-toast>
   
   <!-- Header -->
   <div class="bg-white border-b border-gray-200 sticky top-0 z-10">
     <div class="max-w-7xl mx-auto px-4 py-4">
-      <div class="flex items-center justify-between">
+      <div class="flex items-center justify-between gap-3">
         <div class="flex items-center gap-3">
           <button class="p-2 hover:bg-gray-100 rounded-lg transition-colors" (click)="goBack()">
-            <i class="pi pi-arrow-left"></i>
+            <i class="pi pi-arrow-left text-blue-600"></i>
           </button>
-          <h1 class="text-xl font-bold text-gray-900">{{titulo}}</h1>
+          <h1 class="text-xl font-bold text-gray-900">Crear Nueva Tarea</h1>
         </div>
-        <button class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-                (click)="guardarTarea()">
-          Guardar
-        </button>
+        <!-- Navegación rápida -->
+        <div class="flex items-center gap-2">
+          <a routerLink="/admin-tareas" class="px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100 rounded-lg transition-colors flex items-center gap-2">
+            <i class="pi pi-list text-blue-600"></i>
+            <span class="hidden sm:inline">Mis Tareas</span>
+          </a>
+        </div>
       </div>
     </div>
   </div>
 
-  <div class="max-w-4xl mx-auto px-4 py-6">
-    <div class="bg-white rounded-lg p-6 space-y-6">
-      <!-- Nombre de la tarea -->
-      <div>
-        <label class="block text-sm font-medium text-gray-700 mb-2">
-          Nombre de la tarea *
-        </label>
-        <input 
-          type="text"
-          class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
-          placeholder="Ej. Revisar inventario"
-          [(ngModel)]="nombreTarea">
-      </div>
+  <!-- Loading -->
+  <div *ngIf="isLoading && categoriasDisponibles.length === 0" class="flex justify-center items-center py-20">
+    <i class="pi pi-spin pi-spinner text-4xl text-blue-600"></i>
+  </div>
 
-      <!-- Descripción -->
-      <div>
-        <label class="block text-sm font-medium text-gray-700 mb-2">
-          Descripción de la tarea
-        </label>
-        <textarea 
-          rows="4"
-          class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
-          placeholder="Escribe aquí..."
-          [(ngModel)]="descripcionTarea"></textarea>
-      </div>
-
-      <!-- Fecha Programada -->
-      <div>
-        <label class="block text-sm font-medium text-gray-700 mb-2">
-          Fecha Programada *
-        </label>
-        <p-datePicker 
-          [(ngModel)]="fechaProgramada"
-          [showIcon]="true"
-          iconDisplay="input"
-          dateFormat="dd/mm/yy"
-          placeholder="Seleccionar fecha"
-          [minDate]="minDate"
-          class="w-full">
-        </p-datePicker>
-      </div>
-
-      <!-- Tipo de asignación y Cargo -->
-      <div class="grid grid-cols-2 gap-4">
+  <!-- Formulario -->
+  <div *ngIf="!isLoading || categoriasDisponibles.length > 0" class="max-w-3xl mx-auto px-4 py-6">
+    <div class="bg-white rounded-lg shadow-sm p-6">
+      <div class="space-y-5">
+        
+        <!-- Título -->
         <div>
-          <label class="block text-sm font-medium text-gray-700 mb-2">
-            Tipo de asignación
+          <label class="text-sm font-medium text-gray-700 mb-2 block">
+            Título de la tarea <span class="text-red-500">*</span>
           </label>
-          <select 
-            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-gray-900"
-            [(ngModel)]="tipoAsignacion"
-            (change)="onTipoAsignacionChange()">
-            <option value="cargo">Asignar por cargo</option>
-            <option value="usuario">Asignar por usuario</option>
-          </select>
+          <input
+            type="text"
+            [(ngModel)]="titulo"
+            placeholder="Ej: Revisar inventario de productos"
+            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            [class.border-red-500]="titulo && titulo.trim().length < 5" />
+          <p *ngIf="titulo && titulo.trim().length < 5" class="text-xs text-red-500 mt-1">
+            El título debe tener al menos 5 caracteres
+          </p>
         </div>
 
+        <!-- Descripción -->
         <div>
-          <label class="block text-sm font-medium text-gray-700 mb-2">
-            Cargo
+          <label class="text-sm font-medium text-gray-700 mb-2 block">
+            Descripción
           </label>
-          <select 
-            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-gray-900"
-            [(ngModel)]="cargoSeleccionado">
-            <option value="" disabled class="text-gray-900">Seleccionar cargo</option>
-            <option *ngFor="let cargo of cargosDisponibles" [value]="cargo.nombre">
-              {{cargo.nombre}}
-            </option>
-          </select>
-        </div>
-      </div>
-
-      <!-- Usuario (solo si tipo es usuario) -->
-      <div *ngIf="tipoAsignacion === 'usuario'">
-        <label class="block text-sm font-medium text-gray-700 mb-2">
-          Usuario
-        </label>
-        <select 
-          class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-gray-900"
-          [(ngModel)]="usuario">
-          <option value="" disabled>Seleccionar usuario</option>
-          <option *ngFor="let user of usuariosDisponibles" [value]="user.usuarios_id">
-            Usuario #{{user.usuarios_id}}
-          </option>
-        </select>
-      </div>
-
-      <!-- Actividad -->
-      <div class="bg-blue-50 p-4 rounded-lg border-2 border-blue-300">
-        <label class="block text-sm font-medium text-gray-700 mb-2">
-          🎯 Actividad (opcional)
-        </label>
-        <select 
-          class="w-full px-4 py-2 border-2 border-blue-400 rounded-lg focus:ring-2 focus:ring-blue-500 text-gray-900"
-          [(ngModel)]="actividadSeleccionada">
-          <option [value]="null">Sin actividad</option>
-          <option *ngFor="let act of actividadesDisponibles" [value]="act.actividades_id">
-            {{act.actividades_titulo}}
-          </option>
-        </select>
-        <small class="block mt-1 text-gray-600">
-          Total: {{actividadesDisponibles.length}} actividades disponibles
-        </small>
-      </div>
-
-      <!-- Subcategoría -->
-      <div>
-        <label class="block text-sm font-medium text-gray-700 mb-2 text-gray-900">
-          Categoría
-        </label>
-        <select 
-          class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-gray-900"
-          [(ngModel)]="subcategoria">
-          <option value="" disabled>Seleccionar</option>
-          <option *ngFor="let cat of categoriasDisponibles" [value]="cat.categoria_id">
-            {{cat.categoria_nombre}}
-          </option>
-        </select>
-      </div>
-
-      <!-- Orden y Prioridad -->
-      <div class="grid grid-cols-2 gap-4">
-        <div>
-          <label class="block text-sm font-medium text-gray-700 mb-2">
-            Orden
-          </label>
-          <input 
-            type="number"
-            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-gray-900"
-            [(ngModel)]="orden"
-            min="1">
+          <textarea
+            [(ngModel)]="descripcion"
+            placeholder="Describe la tarea..."
+            rows="4"
+            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"></textarea>
         </div>
 
+        <!-- Prioridad -->
         <div>
-          <label class="block text-sm font-medium text-gray-700 mb-2">
-            Prioridad
+          <label class="text-sm font-medium text-gray-700 mb-2 block">
+            Prioridad <span class="text-red-500">*</span>
           </label>
-          <select 
-            class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 text-gray-900"
-            [(ngModel)]="prioridad">
-            <option value="baja">Baja</option>
-            <option value="media">Media</option>
-            <option value="alta">Alta</option>
-          </select>
+          <p-select
+            [(ngModel)]="prioridad"
+            [options]="prioridades"
+            optionLabel="label"
+            optionValue="value"
+            placeholder="Seleccionar prioridad"
+            styleClass="w-full">
+          </p-select>
         </div>
+
+        <!-- Fechas en grid de 2 columnas -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <!-- Fecha de Inicio -->
+          <div>
+            <label class="text-sm font-medium text-gray-700 mb-2 block">
+              Fecha de Inicio <span class="text-red-500">*</span>
+            </label>
+            <p-datepicker
+              [(ngModel)]="fechaInicio"
+              [showIcon]="true"
+              [showTime]="true"
+              hourFormat="12"
+              dateFormat="dd/mm/yy"
+              placeholder="Seleccionar fecha y hora"
+              [minDate]="minDate"
+              styleClass="w-full">
+            </p-datepicker>
+          </div>
+
+          <!-- Fecha de Fin -->
+          <div>
+            <label class="text-sm font-medium text-gray-700 mb-2 block">
+              Fecha de Fin <span class="text-red-500">*</span>
+            </label>
+            <p-datepicker
+              [(ngModel)]="fechaFin"
+              [showIcon]="true"
+              [showTime]="true"
+              hourFormat="12"
+              dateFormat="dd/mm/yy"
+              placeholder="Seleccionar fecha y hora"
+              styleClass="w-full"
+              [minDate]="fechaInicio || minDate">
+            </p-datepicker>
+          </div>
+        </div>
+
+        <!-- Categoría y Subcategoría en grid de 2 columnas -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <!-- Categoría -->
+          <div>
+            <label class="text-sm font-medium text-gray-700 mb-2 block">
+              Categoría <span class="text-red-500">*</span>
+            </label>
+            <p-select
+              [(ngModel)]="categoriaId"
+              [options]="categoriasDisponibles"
+              optionLabel="nombre"
+              optionValue="id"
+              placeholder="Seleccionar categoría"
+              [showClear]="true"
+              styleClass="w-full"
+              (onChange)="onCategoriaChange()">
+            </p-select>
+          </div>
+
+          <!-- Subcategoría (solo aparece si hay categoría seleccionada y tiene subcategorías) -->
+          <div *ngIf="categoriaId && subcategoriasFiltradas.length > 0">
+            <label class="text-sm font-medium text-gray-700 mb-2 block">
+              Subcategoría <span class="text-red-500">*</span>
+            </label>
+            <p-select
+              [(ngModel)]="subcategoriaId"
+              [options]="subcategoriasFiltradas"
+              optionLabel="nombre"
+              optionValue="id"
+              placeholder="Seleccionar subcategoría"
+              [showClear]="true"
+              styleClass="w-full">
+            </p-select>
+          </div>
+        </div>
+
+        <!-- Actividad -->
+        <div>
+          <label class="text-sm font-medium text-gray-700 mb-2 block">
+            Actividad <span class="text-red-500">*</span>
+          </label>
+          <p-select
+            [(ngModel)]="actividadId"
+            [options]="actividadesDisponibles"
+            optionLabel="nombre"
+            optionValue="id"
+            placeholder="Seleccionar actividad"
+            [showClear]="true"
+            [filter]="true"
+            filterPlaceholder="Buscar actividad..."
+            styleClass="w-full">
+          </p-select>
+          <p class="text-xs text-gray-500 mt-1">
+            Vincula esta tarea a una actividad
+          </p>
+        </div>
+
+        <!-- Asignar por (Usuario o Cargo) en grid de 2 columnas -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <!-- Tipo de asignación -->
+          <div>
+            <label class="text-sm font-medium text-gray-700 mb-2 block">
+              Asignar por
+            </label>
+            <p-select
+              [(ngModel)]="tipoAsignacion"
+              [options]="tiposAsignacion"
+              optionLabel="label"
+              optionValue="value"
+              placeholder="Seleccionar tipo"
+              [showClear]="true"
+              styleClass="w-full"
+              (onChange)="onTipoAsignacionChange()">
+            </p-select>
+          </div>
+
+          <!-- Select de Usuario (solo aparece si tipoAsignacion === 'usuario') -->
+          <div *ngIf="tipoAsignacion === 'usuario'">
+            <label class="text-sm font-medium text-gray-700 mb-2 block">
+              <i class="pi pi-user text-blue-500 mr-1"></i> Usuario
+            </label>
+            <p-select
+              [(ngModel)]="usuarioId"
+              [options]="usuariosDisponibles"
+              optionLabel="nombre_completo"
+              optionValue="id"
+              placeholder="Seleccionar usuario"
+              [showClear]="true"
+              [filter]="true"
+              filterPlaceholder="Buscar..."
+              styleClass="w-full">
+            </p-select>
+          </div>
+
+          <!-- Select de Cargo (solo aparece si tipoAsignacion === 'cargo') -->
+          <div *ngIf="tipoAsignacion === 'cargo'">
+            <label class="text-sm font-medium text-gray-700 mb-2 block">
+              <i class="pi pi-briefcase text-green-500 mr-1"></i> Cargo
+            </label>
+            <p-select
+              [(ngModel)]="cargoId"
+              [options]="cargosDisponibles"
+              optionLabel="nombre"
+              optionValue="id"
+              placeholder="Seleccionar cargo"
+              [showClear]="true"
+              [filter]="true"
+              filterPlaceholder="Buscar..."
+              styleClass="w-full">
+            </p-select>
+          </div>
+        </div>
+
       </div>
 
-      <!-- Estado -->
-      <div class="flex items-center gap-3">
-        <label class="text-sm font-medium text-gray-700">
-          Estado de la tarea:
-        </label>
-        <label class="relative inline-flex items-center cursor-pointer">
-          <input type="checkbox" class="sr-only peer" [(ngModel)]="estadoActivo">
-          <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
-          <span class="ml-3 text-sm font-medium" [class.text-green-600]="estadoActivo" [class.text-gray-500]="!estadoActivo">
-            {{estadoActivo ? 'Activo' : 'Inactivo'}}
-          </span>
-        </label>
+      <!-- Botones de acción -->
+      <div class="flex gap-3 mt-6">
+        <button 
+          class="flex-1 px-4 py-3 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors text-gray-700 font-medium"
+          (click)="goBack()">
+          Cancelar
+        </button>
+        <button 
+          class="flex-1 px-4 py-3 rounded-lg transition-colors font-medium"
+          [class.bg-blue-600]="puedeGuardar && !isLoading"
+          [class.text-white]="puedeGuardar && !isLoading"
+          [class.hover:bg-blue-700]="puedeGuardar && !isLoading"
+          [class.bg-gray-300]="!puedeGuardar || isLoading"
+          [class.text-gray-500]="!puedeGuardar || isLoading"
+          [class.cursor-not-allowed]="!puedeGuardar || isLoading"
+          [disabled]="!puedeGuardar || isLoading"
+          (click)="guardar()">
+          <span *ngIf="!isLoading">Crear Tarea</span>
+          <span *ngIf="isLoading"><i class="pi pi-spin pi-spinner mr-2"></i> Creando...</span>
+        </button>
       </div>
     </div>
   </div>

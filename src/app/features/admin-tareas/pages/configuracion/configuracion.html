@@ -1,0 +1,413 @@
+<div class="min-h-screen bg-gray-50">
+  <!-- Toast para mensajes -->
+  <p-toast></p-toast>
+  
+  <!-- Header -->
+  <div class="bg-white border-b border-gray-200 sticky top-0 z-10">
+    <div class="max-w-7xl mx-auto px-4 py-4">
+      <div class="flex justify-between items-center">
+        <div class="flex items-center gap-4">
+          <button 
+            class="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+            (click)="volver()">
+            <lucide-icon name="arrow-left" [size]="20" class="text-gray-600"></lucide-icon>
+          </button>
+          <div>
+            <h1 class="text-2xl font-bold text-gray-900">Configuración</h1>
+            <p class="text-sm text-gray-500">Administra los catálogos del sistema</p>
+          </div>
+        </div>
+        <button 
+          class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2"
+          (click)="cargarDatos()">
+          <lucide-icon name="refresh-cw" [size]="18"></lucide-icon>
+          <span>Actualizar</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Contenido Principal -->
+  <div class="max-w-7xl mx-auto px-4 py-6">
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      
+      <!-- Card Categorías -->
+      <div class="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+        <div class="bg-gradient-to-r from-blue-500 to-blue-600 px-5 py-4">
+          <div class="flex items-center justify-between">
+            <div class="flex items-center gap-3">
+              <div class="w-10 h-10 bg-white/20 rounded-lg flex items-center justify-center">
+                <lucide-icon name="folder" [size]="22" class="text-white"></lucide-icon>
+              </div>
+              <div>
+                <h2 class="text-lg font-semibold text-white">Categorías</h2>
+                <p class="text-blue-100 text-xs">{{categorias.length}} registros</p>
+              </div>
+            </div>
+            <button 
+              class="w-9 h-9 bg-white/20 hover:bg-white/30 rounded-lg flex items-center justify-center transition-colors"
+              (click)="abrirModalCategoria()">
+              <lucide-icon name="plus" [size]="20" class="text-white"></lucide-icon>
+            </button>
+          </div>
+        </div>
+        
+        <div class="p-4 max-h-96 overflow-y-auto">
+          <!-- Loading -->
+          <div *ngIf="cargandoCategorias" class="flex justify-center py-8">
+            <lucide-icon name="refresh-cw" [size]="28" class="text-blue-500 animate-spin"></lucide-icon>
+          </div>
+          
+          <!-- Lista vacía -->
+          <div *ngIf="!cargandoCategorias && categorias.length === 0" class="text-center py-8">
+            <lucide-icon name="folder" [size]="48" class="text-gray-300 mx-auto mb-2"></lucide-icon>
+            <p class="text-gray-500 text-sm">No hay categorías</p>
+          </div>
+          
+          <!-- Lista de categorías -->
+          <div *ngIf="!cargandoCategorias && categorias.length > 0" class="space-y-2">
+            <div *ngFor="let categoria of categorias" 
+                 class="group bg-gray-50 hover:bg-blue-50 rounded-lg p-3 transition-colors border border-transparent hover:border-blue-200">
+              
+              <!-- Vista normal -->
+              <div *ngIf="!categoria.editando" class="flex items-center justify-between">
+                <div class="flex items-center gap-3">
+                  <span class="w-8 h-8 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center text-sm font-medium">
+                    {{categoria.id}}
+                  </span>
+                  <span class="text-gray-800 font-medium">{{categoria.nombre}}</span>
+                </div>
+                <button 
+                  class="opacity-0 group-hover:opacity-100 p-2 hover:bg-blue-100 rounded-lg transition-all"
+                  (click)="editarCategoria(categoria)">
+                  <lucide-icon name="pencil" [size]="16" class="text-blue-600"></lucide-icon>
+                </button>
+              </div>
+              
+              <!-- Vista edición -->
+              <div *ngIf="categoria.editando" class="flex flex-col gap-2">
+                <input 
+                  type="text" 
+                  [(ngModel)]="categoria.nombre"
+                  class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  placeholder="Nombre de la categoría">
+                <div class="flex gap-2 justify-end">
+                  <button 
+                    class="p-2 text-gray-600 hover:bg-gray-200 rounded-lg transition-colors"
+                    (click)="cancelarEdicionCategoria(categoria)">
+                    <lucide-icon name="x" [size]="18"></lucide-icon>
+                  </button>
+                  <button 
+                    class="p-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                    (click)="guardarEdicionCategoria(categoria)">
+                    <lucide-icon name="check" [size]="18"></lucide-icon>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Card Subcategorías -->
+      <div class="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+        <div class="bg-gradient-to-r from-purple-500 to-purple-600 px-5 py-4">
+          <div class="flex items-center justify-between">
+            <div class="flex items-center gap-3">
+              <div class="w-10 h-10 bg-white/20 rounded-lg flex items-center justify-center">
+                <lucide-icon name="folder-open" [size]="22" class="text-white"></lucide-icon>
+              </div>
+              <div>
+                <h2 class="text-lg font-semibold text-white">Subcategorías</h2>
+                <p class="text-purple-100 text-xs">{{subcategorias.length}} registros</p>
+              </div>
+            </div>
+            <button 
+              class="w-9 h-9 bg-white/20 hover:bg-white/30 rounded-lg flex items-center justify-center transition-colors"
+              (click)="abrirModalSubcategoria()">
+              <lucide-icon name="plus" [size]="20" class="text-white"></lucide-icon>
+            </button>
+          </div>
+        </div>
+        
+        <div class="p-4 max-h-96 overflow-y-auto">
+          <!-- Loading -->
+          <div *ngIf="cargandoSubcategorias" class="flex justify-center py-8">
+            <lucide-icon name="refresh-cw" [size]="28" class="text-purple-500 animate-spin"></lucide-icon>
+          </div>
+          
+          <!-- Lista vacía -->
+          <div *ngIf="!cargandoSubcategorias && subcategorias.length === 0" class="text-center py-8">
+            <lucide-icon name="folder-open" [size]="48" class="text-gray-300 mx-auto mb-2"></lucide-icon>
+            <p class="text-gray-500 text-sm">No hay subcategorías</p>
+          </div>
+          
+          <!-- Lista de subcategorías -->
+          <div *ngIf="!cargandoSubcategorias && subcategorias.length > 0" class="space-y-2">
+            <div *ngFor="let subcategoria of subcategorias" 
+                 class="group bg-gray-50 hover:bg-purple-50 rounded-lg p-3 transition-colors border border-transparent hover:border-purple-200">
+              
+              <!-- Vista normal -->
+              <div *ngIf="!subcategoria.editando" class="flex items-center justify-between">
+                <div class="flex flex-col">
+                  <div class="flex items-center gap-2">
+                    <span class="w-6 h-6 bg-purple-100 text-purple-600 rounded-full flex items-center justify-center text-xs font-medium">
+                      {{subcategoria.id}}
+                    </span>
+                    <span class="text-gray-800 font-medium text-sm">{{subcategoria.nombre}}</span>
+                  </div>
+                  <span class="text-xs text-gray-500 ml-8 mt-1 flex items-center gap-1">
+                    <lucide-icon name="folder" [size]="12"></lucide-icon>
+                    {{getNombreCategoria(subcategoria.categoria_id)}}
+                  </span>
+                </div>
+                <button 
+                  class="opacity-0 group-hover:opacity-100 p-2 hover:bg-purple-100 rounded-lg transition-all"
+                  (click)="editarSubcategoria(subcategoria)">
+                  <lucide-icon name="pencil" [size]="16" class="text-purple-600"></lucide-icon>
+                </button>
+              </div>
+              
+              <!-- Vista edición -->
+              <div *ngIf="subcategoria.editando" class="flex flex-col gap-2">
+                <input 
+                  type="text" 
+                  [(ngModel)]="subcategoria.nombre"
+                  class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                  placeholder="Nombre">
+                <select 
+                  [(ngModel)]="subcategoria.categoria_id"
+                  class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-purple-500 focus:border-purple-500">
+                  <option *ngFor="let cat of categorias" [ngValue]="cat.id">{{cat.nombre}}</option>
+                </select>
+                <div class="flex gap-2 justify-end">
+                  <button 
+                    class="p-2 text-gray-600 hover:bg-gray-200 rounded-lg transition-colors"
+                    (click)="cancelarEdicionSubcategoria(subcategoria)">
+                    <lucide-icon name="x" [size]="18"></lucide-icon>
+                  </button>
+                  <button 
+                    class="p-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
+                    (click)="guardarEdicionSubcategoria(subcategoria)">
+                    <lucide-icon name="check" [size]="18"></lucide-icon>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Card Sucursales -->
+      <div class="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+        <div class="bg-gradient-to-r from-emerald-500 to-emerald-600 px-5 py-4">
+          <div class="flex items-center justify-between">
+            <div class="flex items-center gap-3">
+              <div class="w-10 h-10 bg-white/20 rounded-lg flex items-center justify-center">
+                <lucide-icon name="building-2" [size]="22" class="text-white"></lucide-icon>
+              </div>
+              <div>
+                <h2 class="text-lg font-semibold text-white">Sucursales</h2>
+                <p class="text-emerald-100 text-xs">{{sucursales.length}} registros</p>
+              </div>
+            </div>
+            <button 
+              class="w-9 h-9 bg-white/20 hover:bg-white/30 rounded-lg flex items-center justify-center transition-colors"
+              (click)="abrirModalSucursal()">
+              <lucide-icon name="plus" [size]="20" class="text-white"></lucide-icon>
+            </button>
+          </div>
+        </div>
+        
+        <div class="p-4 max-h-96 overflow-y-auto">
+          <!-- Loading -->
+          <div *ngIf="cargandoSucursales" class="flex justify-center py-8">
+            <lucide-icon name="refresh-cw" [size]="28" class="text-emerald-500 animate-spin"></lucide-icon>
+          </div>
+          
+          <!-- Lista vacía -->
+          <div *ngIf="!cargandoSucursales && sucursales.length === 0" class="text-center py-8">
+            <lucide-icon name="building-2" [size]="48" class="text-gray-300 mx-auto mb-2"></lucide-icon>
+            <p class="text-gray-500 text-sm">No hay sucursales</p>
+          </div>
+          
+          <!-- Lista de sucursales -->
+          <div *ngIf="!cargandoSucursales && sucursales.length > 0" class="space-y-2">
+            <div *ngFor="let sucursal of sucursales" 
+                 class="group bg-gray-50 hover:bg-emerald-50 rounded-lg p-3 transition-colors border border-transparent hover:border-emerald-200">
+              
+              <!-- Vista normal -->
+              <div *ngIf="!sucursal.editando" class="flex items-center justify-between">
+                <div class="flex flex-col">
+                  <div class="flex items-center gap-2">
+                    <span class="w-6 h-6 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center text-xs font-medium">
+                      {{sucursal.id}}
+                    </span>
+                    <span class="text-gray-800 font-medium text-sm">{{sucursal.nombre}}</span>
+                  </div>
+                  <span class="text-xs text-gray-500 ml-8 mt-1" *ngIf="sucursal.direccion">
+                    📍 {{sucursal.direccion}}
+                  </span>
+                </div>
+                <button 
+                  class="opacity-0 group-hover:opacity-100 p-2 hover:bg-emerald-100 rounded-lg transition-all"
+                  (click)="editarSucursal(sucursal)">
+                  <lucide-icon name="pencil" [size]="16" class="text-emerald-600"></lucide-icon>
+                </button>
+              </div>
+              
+              <!-- Vista edición -->
+              <div *ngIf="sucursal.editando" class="flex flex-col gap-2">
+                <input 
+                  type="text" 
+                  [(ngModel)]="sucursal.nombre"
+                  class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+                  placeholder="Nombre">
+                <input 
+                  type="text" 
+                  [(ngModel)]="sucursal.direccion"
+                  class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+                  placeholder="Dirección (opcional)">
+                <div class="flex gap-2 justify-end">
+                  <button 
+                    class="p-2 text-gray-600 hover:bg-gray-200 rounded-lg transition-colors"
+                    (click)="cancelarEdicionSucursal(sucursal)">
+                    <lucide-icon name="x" [size]="18"></lucide-icon>
+                  </button>
+                  <button 
+                    class="p-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors"
+                    (click)="guardarEdicionSucursal(sucursal)">
+                    <lucide-icon name="check" [size]="18"></lucide-icon>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- Modal Nueva Categoría -->
+<p-dialog 
+  [(visible)]="modalCategoria" 
+  [modal]="true" 
+  [style]="{width: '400px'}"
+  [closable]="true"
+  header="Nueva Categoría">
+  <div class="flex flex-col gap-4 py-2">
+    <div>
+      <label class="text-sm font-medium text-gray-700 mb-2 block">Nombre *</label>
+      <input 
+        type="text" 
+        [(ngModel)]="nuevaCategoria.nombre"
+        class="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+        placeholder="Ingrese el nombre de la categoría">
+    </div>
+  </div>
+  <ng-template pTemplate="footer">
+    <div class="flex gap-3 justify-end">
+      <button 
+        class="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors flex items-center gap-2"
+        (click)="modalCategoria = false">
+        <lucide-icon name="x" [size]="18"></lucide-icon>
+        Cancelar
+      </button>
+      <button 
+        class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2"
+        (click)="guardarCategoria()">
+        <lucide-icon name="check" [size]="18"></lucide-icon>
+        Guardar
+      </button>
+    </div>
+  </ng-template>
+</p-dialog>
+
+<!-- Modal Nueva Subcategoría -->
+<p-dialog 
+  [(visible)]="modalSubcategoria" 
+  [modal]="true" 
+  [style]="{width: '400px'}"
+  [closable]="true"
+  header="Nueva Subcategoría">
+  <div class="flex flex-col gap-4 py-2">
+    <div>
+      <label class="text-sm font-medium text-gray-700 mb-2 block">Categoría Padre *</label>
+      <select 
+        [(ngModel)]="nuevaSubcategoria.categoria_id"
+        class="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500">
+        <option [ngValue]="null" disabled>Seleccione una categoría</option>
+        <option *ngFor="let cat of categorias" [ngValue]="cat.id">{{cat.nombre}}</option>
+      </select>
+    </div>
+    <div>
+      <label class="text-sm font-medium text-gray-700 mb-2 block">Nombre *</label>
+      <input 
+        type="text" 
+        [(ngModel)]="nuevaSubcategoria.nombre"
+        class="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+        placeholder="Ingrese el nombre de la subcategoría">
+    </div>
+  </div>
+  <ng-template pTemplate="footer">
+    <div class="flex gap-3 justify-end">
+      <button 
+        class="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors flex items-center gap-2"
+        (click)="modalSubcategoria = false">
+        <lucide-icon name="x" [size]="18"></lucide-icon>
+        Cancelar
+      </button>
+      <button 
+        class="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors flex items-center gap-2"
+        (click)="guardarSubcategoria()">
+        <lucide-icon name="check" [size]="18"></lucide-icon>
+        Guardar
+      </button>
+    </div>
+  </ng-template>
+</p-dialog>
+
+<!-- Modal Nueva Sucursal -->
+<p-dialog 
+  [(visible)]="modalSucursal" 
+  [modal]="true" 
+  [style]="{width: '400px'}"
+  [closable]="true"
+  header="Nueva Sucursal">
+  <div class="flex flex-col gap-4 py-2">
+    <div>
+      <label class="text-sm font-medium text-gray-700 mb-2 block">Nombre *</label>
+      <input 
+        type="text" 
+        [(ngModel)]="nuevaSucursal.nombre"
+        class="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+        placeholder="Ingrese el nombre de la sucursal">
+    </div>
+    <div>
+      <label class="text-sm font-medium text-gray-700 mb-2 block">Dirección</label>
+      <input 
+        type="text" 
+        [(ngModel)]="nuevaSucursal.direccion"
+        class="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500"
+        placeholder="Ingrese la dirección (opcional)">
+    </div>
+  </div>
+  <ng-template pTemplate="footer">
+    <div class="flex gap-3 justify-end">
+      <button 
+        class="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg transition-colors flex items-center gap-2"
+        (click)="modalSucursal = false">
+        <lucide-icon name="x" [size]="18"></lucide-icon>
+        Cancelar
+      </button>
+      <button 
+        class="px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700 transition-colors flex items-center gap-2"
+        (click)="guardarSucursal()">
+        <lucide-icon name="check" [size]="18"></lucide-icon>
+        Guardar
+      </button>
+    </div>
+  </ng-template>
+</p-dialog>

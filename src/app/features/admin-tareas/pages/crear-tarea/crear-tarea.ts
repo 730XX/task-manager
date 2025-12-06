@@ -1,9 +1,18 @@
 import { Component, OnInit } from '@angular/core';
-import { Router, ActivatedRoute } from '@angular/router';
+import { Router } from '@angular/router';
 import { Location } from '@angular/common';
-import { TareasService } from '../../../usuario-tareas/services/tareas.service';
-import { TareasService as TareasApiService, CrearTareaRequest, Categoria, Usuario } from '../../../../core/services/tareas.service';
-import { ActividadesService, Actividad } from '../../../../core/services/actividades.service';
+import { TareasService } from '../../../../core/services/tareas.service';
+import { CategoriasService } from '../../../../core/services/categorias.service';
+import { UsuariosService } from '../../../../core/services/usuarios.service';
+import { ActividadesService } from '../../../../core/services/actividades.service';
+import { CargosService } from '../../../../core/services/cargos.service';
+import { AuthService } from '../../../../core/services/auth.service';
+import { Usuario } from '../../../../core/interfaces/usuario.interface';
+import { Actividad } from '../../../../core/interfaces/actividad.interface';
+import { Categoria } from '../../../../core/interfaces/categoria.interface';
+import { Subcategoria } from '../../../../core/interfaces/subcategoria.interface';
+import { Cargo } from '../../../../core/interfaces/cargo.interface';
+import { isSuccess } from '../../../../core/interfaces/api-response.interface';
 import { MessageService } from 'primeng/api';
 import { forkJoin } from 'rxjs';
 
@@ -14,73 +23,90 @@ import { forkJoin } from 'rxjs';
   styleUrl: './crear-tarea.scss',
 })
 export class CrearTarea implements OnInit {
-  titulo: string = 'Crear tarea';
-  nombreTarea: string = '';
-  descripcionTarea: string = '';
-  tipoAsignacion: string = 'cargo';
-  cargoSeleccionado: string = 'Seleccionar cargo';
-  usuario: string = 'Seleccionar usuario';
-  subcategoria: string = '';
-  orden: string = '1';
-  prioridad: string = 'media';
-  estadoActivo: boolean = true;
+  titulo: string = '';
+  descripcion: string = '';
+  prioridad: 'ALTA' | 'MEDIA' | 'BAJA' = 'MEDIA';
   
-  modoEdicion: boolean = false;
-  tareaId?: string;
-  isLoading: boolean = false;
-  fechaProgramada: Date = new Date();
+  // Fechas
+  fechaInicio: Date | null = null;
+  fechaFin: Date | null = null;
   minDate: Date = new Date();
+  
+  // Categoría y Subcategoría
+  categoriaId: number | null = null;
+  subcategoriaId: number | null = null;
+  
+  // Asignación (por usuario o por cargo)
+  tipoAsignacion: 'usuario' | 'cargo' | null = null;
+  usuarioId: number | null = null;
+  cargoId: number | null = null;
+  
+  // Actividad
+  actividadId: number | null = null;
+  
+  isLoading: boolean = false;
 
-  cargosDisponibles: any[] = []; // Vacío por ahora ya que usuarios no tienen cargo
+  prioridades = [
+    { label: 'Alta', value: 'ALTA' },
+    { label: 'Media', value: 'MEDIA' },
+    { label: 'Baja', value: 'BAJA' }
+  ];
 
-  usuariosDisponibles: Usuario[] = [];
+  tiposAsignacion = [
+    { label: 'Usuario', value: 'usuario' },
+    { label: 'Cargo', value: 'cargo' }
+  ];
+
   categoriasDisponibles: Categoria[] = [];
+  subcategoriasDisponibles: Subcategoria[] = [];
+  subcategoriasFiltradas: Subcategoria[] = [];
+  usuariosDisponibles: Usuario[] = [];
+  cargosDisponibles: Cargo[] = [];
   actividadesDisponibles: Actividad[] = [];
-  actividadSeleccionada: number | null = null;
 
   constructor(
-    private location: Location,
     private router: Router,
-    private route: ActivatedRoute,
+    private location: Location,
     private tareasService: TareasService,
-    private tareasApiService: TareasApiService,
+    private categoriasService: CategoriasService,
+    private usuariosService: UsuariosService,
+    private cargosService: CargosService,
     private actividadesService: ActividadesService,
+    private authService: AuthService,
     private messageService: MessageService
   ) {}
 
   ngOnInit(): void {
     this.cargarCatalogos();
-    
-    this.route.queryParams.subscribe(params => {
-      if (params['edit'] === 'true') {
-        this.modoEdicion = true;
-        this.titulo = 'Editar tarea';
-        this.tareaId = params['tareaId'];
-        this.cargarDatosTarea();
-      }
-    });
   }
 
   cargarCatalogos(): void {
+    this.isLoading = true;
+
     forkJoin({
-      categorias: this.tareasApiService.getCategorias(),
-      usuarios: this.tareasApiService.getUsuarios(),
-      actividades: this.actividadesService.getActividades()
+      categorias: this.categoriasService.obtenerTodas(),
+      subcategorias: this.categoriasService.obtenerSubcategorias(),
+      usuarios: this.usuariosService.obtenerTodos(),
+      cargos: this.cargosService.obtenerTodos(),
+      actividades: this.actividadesService.obtenerTodas()
     }).subscribe({
-      next: (response) => {
-        if (response.categorias.tipo === 1) {
-          this.categoriasDisponibles = response.categorias.data.categorias;
-          console.log('Categorías cargadas:', this.categoriasDisponibles.length);
+      next: (result) => {
+        if (isSuccess(result.categorias) && result.categorias.data) {
+          this.categoriasDisponibles = result.categorias.data;
         }
-        if (response.usuarios.tipo === 1) {
-          this.usuariosDisponibles = response.usuarios.data.usuarios;
-          console.log('Usuarios cargados:', this.usuariosDisponibles.length);
+        if (isSuccess(result.subcategorias) && result.subcategorias.data) {
+          this.subcategoriasDisponibles = result.subcategorias.data;
         }
-        if (response.actividades.tipo === 1) {
-          this.actividadesDisponibles = response.actividades.data.actividades;
-          console.log('Actividades cargadas:', this.actividadesDisponibles.length);
-          console.log('Actividades:', this.actividadesDisponibles);
+        if (isSuccess(result.usuarios) && result.usuarios.data) {
+          this.usuariosDisponibles = result.usuarios.data;
         }
+        if (isSuccess(result.cargos) && result.cargos.data) {
+          this.cargosDisponibles = result.cargos.data;
+        }
+        if (isSuccess(result.actividades) && result.actividades.data) {
+          this.actividadesDisponibles = result.actividades.data;
+        }
+        this.isLoading = false;
       },
       error: (error) => {
         this.messageService.add({
@@ -89,54 +115,109 @@ export class CrearTarea implements OnInit {
           detail: 'Error al cargar los catálogos',
           life: 3000
         });
+        this.isLoading = false;
       }
     });
   }
 
-  cargarDatosTarea(): void {
-    if (this.tareaId) {
-      /*const tarea = this.tareasService.getTareaPorId(this.tareaId);
-      if (tarea) {
-        this.nombreTarea = tarea.titulo;
-        this.descripcionTarea = tarea.descripcion;
-        this.subcategoria = tarea.Categoria;
-        this.prioridad = tarea.Prioridad?.toLowerCase() || 'media';
-      }*/
+  /**
+   * Filtra las subcategorías según la categoría seleccionada
+   */
+  filtrarSubcategorias(): void {
+    if (this.categoriaId) {
+      const catId = Number(this.categoriaId);
+      this.subcategoriasFiltradas = this.subcategoriasDisponibles.filter(
+        sub => Number(sub.categoria_id) === catId
+      );
+    } else {
+      this.subcategoriasFiltradas = [];
+      this.subcategoriaId = null;
     }
   }
 
-  onTipoAsignacionChange(): void {
-    this.cargoSeleccionado = 'Seleccionar cargo';
-    this.usuario = 'Seleccionar usuario';
+  /**
+   * Maneja el cambio de categoría
+   */
+  onCategoriaChange(): void {
+    this.subcategoriaId = null;
+    this.filtrarSubcategorias();
   }
 
-  guardarTarea(): void {
-    // Validaciones básicas
-    if (!this.nombreTarea || !this.nombreTarea.trim()) {
+  /**
+   * Maneja el cambio de tipo de asignación
+   */
+  onTipoAsignacionChange(): void {
+    this.usuarioId = null;
+    this.cargoId = null;
+  }
+
+  guardar(): void {
+    // Validaciones
+    if (!this.titulo || this.titulo.trim().length < 5) {
       this.messageService.add({
         severity: 'warn',
         summary: 'Campo requerido',
-        detail: 'El nombre de la tarea es obligatorio',
-        life: 3000
-      });
-      return;
-    }
-
-    if (this.nombreTarea.trim().length < 5) {
-      this.messageService.add({
-        severity: 'warn',
-        summary: 'Título muy corto',
         detail: 'El título debe tener al menos 5 caracteres',
         life: 3000
       });
       return;
     }
 
-    if (!this.fechaProgramada) {
+    if (!this.fechaInicio) {
       this.messageService.add({
         severity: 'warn',
-        summary: 'Fecha requerida',
-        detail: 'Debes seleccionar una fecha programada',
+        summary: 'Campo requerido',
+        detail: 'Debe seleccionar una fecha de inicio',
+        life: 3000
+      });
+      return;
+    }
+
+    if (!this.fechaFin) {
+      this.messageService.add({
+        severity: 'warn',
+        summary: 'Campo requerido',
+        detail: 'Debe seleccionar una fecha de fin',
+        life: 3000
+      });
+      return;
+    }
+
+    if (this.fechaFin < this.fechaInicio) {
+      this.messageService.add({
+        severity: 'warn',
+        summary: 'Error de fechas',
+        detail: 'La fecha de fin debe ser mayor o igual a la fecha de inicio',
+        life: 3000
+      });
+      return;
+    }
+
+    if (!this.categoriaId) {
+      this.messageService.add({
+        severity: 'warn',
+        summary: 'Campo requerido',
+        detail: 'Debe seleccionar una categoría',
+        life: 3000
+      });
+      return;
+    }
+
+    if (!this.subcategoriaId) {
+      this.messageService.add({
+        severity: 'warn',
+        summary: 'Campo requerido',
+        detail: 'Debe seleccionar una subcategoría',
+        life: 3000
+      });
+      return;
+    }
+
+    if (!this.actividadId) {
+      this.messageService.add({
+        severity: 'warn',
+        summary: 'Campo requerido',
+        detail: 'Debe seleccionar una actividad',
         life: 3000
       });
       return;
@@ -144,69 +225,87 @@ export class CrearTarea implements OnInit {
 
     this.isLoading = true;
 
-    // Formatear fecha para el backend (YYYY-MM-DD HH:MM:SS)
-    const fechaFormateada = this.formatearFechaCompleta(this.fechaProgramada);
+    // Formatear fechas a formato MySQL datetime
+    const fechaInicioStr = this.fechaInicio.toISOString().slice(0, 19).replace('T', ' ');
+    const fechaFinStr = this.fechaFin.toISOString().slice(0, 19).replace('T', ' ');
 
-    // Preparar datos para el backend
-    const nuevaTarea: CrearTareaRequest = {
-      titulo: this.nombreTarea.trim(),
-      descripcion: this.descripcionTarea?.trim() || undefined,
-      prioridad: this.prioridad.toUpperCase() as 'ALTA' | 'MEDIA' | 'BAJA',
-      fecha_programada: fechaFormateada,
-      categoria_id: this.subcategoria ? Number(this.subcategoria) : undefined,
-      usuarios_id: (this.tipoAsignacion === 'usuario' && this.usuario) ? Number(this.usuario) : undefined,
-      actividades_id: this.actividadSeleccionada || undefined
+    // Convertir prioridad a formato del backend (Primera letra mayúscula)
+    const prioridadMap: { [key: string]: string } = {
+      'ALTA': 'Alta',
+      'MEDIA': 'Media',
+      'BAJA': 'Baja'
     };
 
-    // Llamar al backend
-    this.tareasApiService.crearTarea(nuevaTarea).subscribe({
+    const request: any = {
+      titulo: this.titulo.trim(),
+      prioridad: prioridadMap[this.prioridad] || 'Media',
+      fecha_inicio: fechaInicioStr,
+      fecha_fin: fechaFinStr
+    };
+
+    if (this.descripcion?.trim()) {
+      request.descripcion = this.descripcion.trim();
+    }
+    
+    // IDs con los nombres correctos que espera el backend
+    request.categoria_id = Number(this.categoriaId);
+    request.subcategoria_id = Number(this.subcategoriaId);
+    request.actividad_id = Number(this.actividadId);
+    
+    // ID del usuario que crea la tarea (usuario logueado actualmente)
+    const usuarioActual = this.authService.currentUserValue;
+    if (usuarioActual?.id) {
+      request.usuario_id = Number(usuarioActual.id);
+    }
+    
+    // Asignación por usuario o cargo
+    if (this.tipoAsignacion === 'usuario' && this.usuarioId) {
+      request.usuario_asignado_id = Number(this.usuarioId);
+    } else if (this.tipoAsignacion === 'cargo' && this.cargoId) {
+      request.cargo_asignado_id = Number(this.cargoId);
+    }
+
+    this.tareasService.crearTarea(request).subscribe({
       next: (response) => {
-        if (response.tipo === 1) {
+        if (isSuccess(response)) {
           this.messageService.add({
             severity: 'success',
-            summary: '¡Tarea creada!',
-            detail: response.mensajes?.[0] || 'La tarea se creó correctamente',
+            summary: '¡Éxito!',
+            detail: 'Tarea creada correctamente',
             life: 3000
           });
           
-          // Volver a la lista después de un pequeño delay
           setTimeout(() => {
             this.router.navigate(['/admin-tareas']);
-          }, 1000);
+          }, 1500);
         }
         this.isLoading = false;
       },
       error: (error) => {
         this.isLoading = false;
-        const mensaje = error.error?.mensajes?.[0] || 'Error al crear la tarea';
         this.messageService.add({
           severity: 'error',
           summary: 'Error',
-          detail: mensaje,
+          detail: error.error?.mensajes?.[0] || 'Error al crear la tarea',
           life: 4000
         });
       }
     });
   }
 
-  private formatearFecha(fecha: Date): string {
-    const year = fecha.getFullYear();
-    const month = String(fecha.getMonth() + 1).padStart(2, '0');
-    const day = String(fecha.getDate()).padStart(2, '0');
-    return `${year}-${month}-${day}`;
-  }
-
-  private formatearFechaCompleta(fecha: Date): string {
-    const year = fecha.getFullYear();
-    const month = String(fecha.getMonth() + 1).padStart(2, '0');
-    const day = String(fecha.getDate()).padStart(2, '0');
-    const hours = String(fecha.getHours()).padStart(2, '0');
-    const minutes = String(fecha.getMinutes()).padStart(2, '0');
-    const seconds = String(fecha.getSeconds()).padStart(2, '0');
-    return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
-  }
-
   goBack(): void {
     this.location.back();
+  }
+
+  get puedeGuardar(): boolean {
+    return !!(
+      this.titulo && 
+      this.titulo.trim().length >= 5 && 
+      this.fechaInicio && 
+      this.fechaFin &&
+      this.categoriaId &&
+      this.subcategoriaId &&
+      this.actividadId
+    );
   }
 }

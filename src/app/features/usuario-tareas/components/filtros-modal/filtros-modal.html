@@ -7,9 +7,9 @@
   
   <ng-template pTemplate="header">
     <div class="flex items-center justify-between w-full">
-      <span class="text-lg font-bold text-gray-200">Filtrar por</span>
+      <span class="text-lg font-bold text-gray-900">Filtrar por</span>
       <button 
-        class="text-blue-600 text-sm underline flex items-center gap-2"
+        class="text-blue-600 text-sm hover:underline flex items-center gap-2"
         (click)="limpiarFiltros()">
         <i class="pi pi-replay"></i>
         <span>Limpiar filtro</span>
@@ -21,29 +21,29 @@
     <!-- Filtros para mis tareas -->
     <div class="flex flex-col gap-4" *ngIf="!esModoLista">
       <div>
-        <label class="text-sm font-medium text-gray-200 mb-2 block">Prioridad</label>
+        <label class="text-sm font-medium text-gray-700 mb-2 block">Prioridad</label>
         <p-select
           [(ngModel)]="filtroPrioridad"
           [options]="prioridades"
           placeholder="Seleccionar prioridad"
-          class="text-gray-100"
+          styleClass="w-full"
           [showClear]="true">
         </p-select>
       </div>
 
       <div>
-        <label class="text-sm font-medium text-gray-200 mb-2 block">Categoría</label>
+        <label class="text-sm font-medium text-gray-700 mb-2 block">Categoría</label>
         <p-select
           [(ngModel)]="filtroCategoria"
           [options]="categorias"
           placeholder="Seleccionar categoría"
-          styleClass="w-full text-blue-600"
+          styleClass="w-full"
           [showClear]="true">
         </p-select>
       </div>
 
       <div>
-        <label class="text-sm font-medium text-gray-200 mb-2 block">Estado</label>
+        <label class="text-sm font-medium text-gray-700 mb-2 block">Estado</label>
         <p-select
           [(ngModel)]="filtroProgreso"
           [options]="progresos"
@@ -56,14 +56,14 @@
 
     <!-- Filtros para tareas sin asignar -->
     <div class="flex flex-col gap-3" *ngIf="esModoLista">
-      <span class="text-sm font-medium text-gray-200">Por Categoría</span>
+      <span class="text-sm font-medium text-gray-700">Por Categoría</span>
       <div class="flex flex-col gap-1 max-h-80 overflow-y-auto border border-gray-200 rounded-lg">
         <div 
           *ngFor="let item of listadoCategorias; let i = index" 
           class="w-full h-10 cursor-pointer px-3 flex justify-between items-center hover:bg-gray-50 transition-colors"
           [class.bg-blue-50]="item.seleccionado"
           (click)="toggleSeleccion(i)">
-          <span class="text-sm" [class.font-medium]="item.seleccionado" [class.text-blue-700]="item.seleccionado">{{item.nombre}}</span>
+          <span class="text-sm text-gray-800" [class.font-medium]="item.seleccionado" [class.text-blue-700]="item.seleccionado">{{item.nombre}}</span>
           <i *ngIf="item.seleccionado" class="pi pi-check text-blue-600"></i>
         </div>
       </div>

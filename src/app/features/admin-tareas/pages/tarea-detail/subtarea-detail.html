@@ -47,6 +47,7 @@
               [ngClass]="{
                 'bg-yellow-500 text-white': tarea?.estado === 'Pendiente',
                 'bg-blue-500 text-white': tarea?.estado === 'En progreso',
+                'bg-orange-500 text-white': tarea?.estado === 'Pausada',
                 'bg-green-500 text-white': tarea?.estado === 'Completada',
                 'bg-gray-400 text-white': tarea?.estado === 'Cerrada'
               }">
@@ -74,7 +75,7 @@
         <div class="flex items-center gap-2 text-sm">
           <i class="pi pi-tag text-gray-500"></i>
           <span class="text-gray-600">SubCategoría:</span>
-          <span class="font-medium text-gray-900">{{tarea?.Categoria || 'Sin categoría'}}</span>
+          <span class="font-medium text-gray-900">{{tarea?.Subcategoria || 'Sin subcategoría'}}</span>
         </div>
       </div>
 
@@ -82,7 +83,7 @@
         <div class="flex items-center gap-2 text-sm">
           <i class="pi pi-tag text-gray-500"></i>
           <span class="text-gray-600">Subcategoría:</span>
-          <span class="font-medium text-gray-900">{{tarea?.Categoria}}</span>
+          <span class="font-medium text-gray-900">{{tarea?.Subcategoria || 'Sin subcategoría'}}</span>
         </div>
         <div class="flex items-center gap-2 text-sm">
           <i class="pi pi-folder text-gray-500"></i>
@@ -92,20 +93,20 @@
       </div>
 
       <div class="grid grid-cols-3 gap-4 mt-3">
+        <!-- <div class="flex items-center gap-2 text-sm">
+          <i class="pi pi-calendar text-gray-500"></i>
+          <span class="text-gray-600">Programada:</span>
+          <span class="font-medium text-gray-900">{{tarea?.fechaAsignacion || 'Sin fecha'}}</span>
+        </div> -->
         <div class="flex items-center gap-2 text-sm">
           <i class="pi pi-clock text-gray-500"></i>
-          <span class="text-gray-600">Programada:</span>
+          <span class="text-gray-600">Inicio:</span>
           <span class="font-medium text-gray-900">{{tarea?.horainicio}}</span>
         </div>
         <div class="flex items-center gap-2 text-sm">
           <i class="pi pi-clock text-gray-500"></i>
-          <span class="text-gray-600">Inicio:</span>
-          <span class="font-medium text-gray-900">{{tarea?.horainicio || 'Sin hora inicio'}}</span>
-        </div>
-        <div class="flex items-center gap-2 text-sm">
-          <i class="pi pi-clock text-gray-500"></i>
           <span class="text-gray-600">Fin:</span>
-          <span class="font-medium text-gray-900">{{tarea?.horafin || 'Sin hora fin'}}</span>
+          <span class="font-medium text-gray-900">{{tarea?.horafin}}</span>
         </div>
       </div>
 
@@ -159,11 +160,11 @@
 
     <!-- Botones de acción -->
     <div class="flex gap-3 mt-6">
-      <button *ngIf="tarea?.estado === 'Pendiente'"
+      <button *ngIf="tarea?.estado === 'Pendiente' || tarea?.estado === 'Pausada'"
               class="flex-1 px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
               (click)="iniciarTarea()">
         <i class="pi pi-play mr-2"></i>
-        Iniciar Tarea
+        {{tarea?.estado === 'Pausada' ? 'Reanudar Tarea' : 'Iniciar Tarea'}}
       </button>
 
       <button *ngIf="tarea?.estado === 'En progreso'"
@@ -189,12 +190,22 @@
 
     <!-- Botón de reapertura para tareas completadas -->
     <div class="flex gap-3 mt-4" *ngIf="tarea?.estado === 'Completada'">
-      <a 
-        class="w-full px-4 py-3 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors font-medium flex items-center justify-center gap-2 cursor-pointer no-underline"
-        [routerLink]="['/admin-tareas/tarea', tarea?.id]">
+      <button 
+        class="w-full px-4 py-3 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors font-medium flex items-center justify-center gap-2"
+        (click)="abrirModalReabrir()">
         <i class="pi pi-replay"></i>
         <span>Reabrir Tarea</span>
-      </a>
+      </button>
     </div>
   </div> <!-- Cierre del div *ngIf="!isLoading" -->
 </div> <!-- Cierre del div min-h-screen -->
+
+<!-- Modal de reapertura -->
+<app-reabrir-tarea-modal
+  [visible]="mostrarModalReabrir"
+  [tareaTitulo]="tarea?.titulo || ''"
+  [prioridadActual]="tarea?.Prioridad || 'Media'"
+  [isLoading]="isReabriendo"
+  (onClose)="cerrarModalReabrir()"
+  (onConfirm)="confirmarReapertura($event)">
+</app-reabrir-tarea-modal>

@@ -2,104 +2,64 @@ import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { environment } from '../../../environments/environments';
+import { 
+  ApiResponse 
+} from '../interfaces/api-response.interface';
+import { 
+  Actividad, 
+  CrearActividadRequest, 
+  ActualizarActividadRequest 
+} from '../interfaces/actividad.interface';
+import { Tarea } from '../interfaces/tarea.interface';
 
-export interface Actividad {
-  actividades_id: number;
-  actividades_titulo: string;
-  actividades_descripcion?: string;
-  actividades_sucursal?: string;
-  actividades_estado: 'ACTIVA' | 'PAUSADA' | 'COMPLETADA' | 'PENDIENTE' | 'EN_PROGRESO';
-  actividades_fecha_programada?: string;
-  actividades_hora_inicio?: string;
-  actividades_hora_fin?: string;
-  usuarios_id?: number;
-  actividades_creado: string;
-  actividades_activo: number;
-  total_tareas?: number;
-  tareas_completadas?: number;
-  tareas_pendientes?: number;
-  tareas_en_progreso?: number;
-  progreso_porcentaje?: number;
-  responsable_nombre?: string;
-}
-
-export interface CrearActividadRequest {
-  titulo: string;
-  descripcion?: string;
-  sucursal?: string;
-  fecha_programada?: string;
-  hora_inicio?: string;
-  hora_fin?: string;
-  estado?: 'ACTIVA' | 'PAUSADA' | 'COMPLETADA' | 'PENDIENTE' | 'EN_PROGRESO';
-}
-
-export interface ApiResponse<T = any> {
-  tipo: number;
-  mensajes: string[];
-  data: T;
-}
+// Re-exportar tipos para compatibilidad
+export type { Actividad, CrearActividadRequest, ActualizarActividadRequest };
 
 @Injectable({
   providedIn: 'root'
 })
 export class ActividadesService {
-  private apiUrl = environment.actividadesApiUrl;
+  private readonly API_URL = `${environment.apiUrl}/actividades`;
 
   constructor(private http: HttpClient) {}
 
   /**
-   * GET /actividades
-   * Obtiene todas las actividades
+   * GET /actividades/listar-actividades
+   * Obtiene todas las actividades (requiere auth)
    */
-  getActividades(): Observable<ApiResponse<{ actividades: Actividad[] }>> {
-    return this.http.get<ApiResponse<{ actividades: Actividad[] }>>(`${this.apiUrl}/`);
+  obtenerTodas(): Observable<ApiResponse<Actividad[]>> {
+    return this.http.get<ApiResponse<Actividad[]>>(`${this.API_URL}/listar-actividades`);
   }
 
   /**
-   * GET /actividades/mis-actividades
-   * Obtiene las actividades del usuario autenticado
+   * GET /actividades/obtener-actividad/:id
+   * Obtiene una actividad por ID (requiere auth)
    */
-  getMisActividades(): Observable<ApiResponse<{ actividades: Actividad[] }>> {
-    return this.http.get<ApiResponse<{ actividades: Actividad[] }>>(`${this.apiUrl}/mis-actividades`);
+  obtenerPorId(id: number): Observable<ApiResponse<Actividad>> {
+    return this.http.get<ApiResponse<Actividad>>(`${this.API_URL}/obtener-actividad/${id}`);
   }
 
   /**
-   * GET /actividades/:id
-   * Obtiene el detalle de una actividad
+   * GET /actividades/tareas/:id
+   * Obtiene las tareas de una actividad por ID
    */
-  getActividadPorId(id: number): Observable<ApiResponse<{ actividad: Actividad }>> {
-    return this.http.get<ApiResponse<{ actividad: Actividad }>>(`${this.apiUrl}/${id}`);
+  obtenerTareasDeActividad(id: number): Observable<ApiResponse<Tarea[]>> {
+    return this.http.get<ApiResponse<Tarea[]>>(`${this.API_URL}/tareas/${id}`);
   }
 
   /**
-   * GET /actividades/:id/tareas
-   * Obtiene las tareas de una actividad
+   * POST /actividades/crear-actividad
+   * Crea una nueva actividad (requiere auth)
    */
-  getTareasDeActividad(id: number): Observable<ApiResponse<{ tareas: any[] }>> {
-    return this.http.get<ApiResponse<{ tareas: any[] }>>(`${this.apiUrl}/${id}/tareas`);
+  crear(actividad: CrearActividadRequest): Observable<ApiResponse<Actividad>> {
+    return this.http.post<ApiResponse<Actividad>>(`${this.API_URL}/crear-actividad`, actividad);
   }
 
   /**
-   * POST /actividades
-   * Crea una nueva actividad
+   * PUT /actividades/actividades/:id
+   * Actualiza una actividad existente (requiere auth)
    */
-  crearActividad(data: CrearActividadRequest): Observable<ApiResponse<{ id: number }>> {
-    return this.http.post<ApiResponse<{ id: number }>>(`${this.apiUrl}/`, data);
-  }
-
-  /**
-   * PUT /actividades/:id
-   * Actualiza una actividad
-   */
-  actualizarActividad(id: number, data: CrearActividadRequest): Observable<ApiResponse> {
-    return this.http.put<ApiResponse>(`${this.apiUrl}/${id}`, data);
-  }
-
-  /**
-   * DELETE /actividades/:id
-   * Elimina una actividad
-   */
-  eliminarActividad(id: number): Observable<ApiResponse> {
-    return this.http.delete<ApiResponse>(`${this.apiUrl}/${id}`);
+  actualizar(id: number, actividad: ActualizarActividadRequest): Observable<ApiResponse<Actividad>> {
+    return this.http.put<ApiResponse<Actividad>>(`${this.API_URL}/actividades/${id}`, actividad);
   }
 }

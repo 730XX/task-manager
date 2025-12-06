@@ -6,56 +6,116 @@
   <div class="bg-white border-b border-gray-200 sticky top-0 z-10">
     <div class="max-w-7xl mx-auto px-4 py-4">
       <div class="flex justify-between items-center mb-4">
-        <h1 class="text-2xl font-bold text-gray-900">Tareas</h1>
-        <div class="flex gap-2">
+        <!-- Logo y título -->
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-xl flex items-center justify-center shadow-lg shadow-blue-500/20">
+            <lucide-icon name="check-square" [size]="20" class="text-white"></lucide-icon>
+          </div>
+          <div>
+            <h1 class="text-xl font-bold text-gray-900">TaskFlow</h1>
+            <p class="text-xs text-gray-500">Panel de gestión</p>
+          </div>
+        </div>
+        
+        <!-- Acciones y perfil -->
+        <div class="flex items-center gap-2">
+          <!-- Botón configuración -->
           <button 
-            class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors flex items-center gap-2"
-            (click)="cerrarSesion()">
-            <i class="pi pi-sign-out"></i>
-            <span>Cerrar Sesión</span>
+            class="p-2.5 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-all"
+            routerLink="/admin-tareas/configuracion"
+            pTooltip="Configuración"
+            tooltipPosition="bottom">
+            <lucide-icon name="settings" [size]="20"></lucide-icon>
           </button>
-          <button 
-            class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors flex items-center gap-2"
-            (click)="crearNuevaActividad()">
-            <i class="pi pi-plus-circle"></i>
-            <span>Nueva Actividad</span>
-          </button>
-          <button 
-            class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2"
-            (click)="crearNuevaTarea()">
-            <i class="pi pi-plus"></i>
-            <span>Nueva Tarea</span>
-          </button>
+          
+          <!-- Separador -->
+          <div class="w-px h-8 bg-gray-200 mx-2"></div>
+          
+          <!-- Perfil de usuario con dropdown -->
+          <div class="relative" #userMenu>
+            <button 
+              class="flex items-center gap-3 pl-3 pr-2 py-1.5 rounded-xl hover:bg-gray-50 transition-all border border-transparent hover:border-gray-200"
+              (click)="toggleUserMenu()">
+              <!-- Avatar con iniciales -->
+              <div class="w-9 h-9 bg-gradient-to-br from-emerald-500 to-teal-600 rounded-full flex items-center justify-center shadow-md">
+                <span class="text-white font-semibold text-sm">{{getInitials()}}</span>
+              </div>
+              <!-- Info usuario -->
+              <div class="text-left hidden sm:block">
+                <p class="text-sm font-medium text-gray-900 leading-tight">{{getUserName()}}</p>
+                <p class="text-xs text-gray-500">{{getUserRol()}}</p>
+              </div>
+              <lucide-icon name="chevron-down" [size]="16" class="text-gray-400"></lucide-icon>
+            </button>
+            
+            <!-- Dropdown menu -->
+            <div *ngIf="userMenuOpen" 
+                 class="absolute right-0 mt-2 w-56 bg-white rounded-xl shadow-lg border border-gray-100 py-2 z-50 animate-fadeIn">
+              <!-- Header del dropdown -->
+              <div class="px-4 py-3 border-b border-gray-100">
+                <p class="text-sm font-semibold text-gray-900">{{getUserName()}}</p>
+                <p class="text-xs text-gray-500 flex items-center gap-1.5 mt-0.5">
+                  <span class="w-2 h-2 rounded-full" 
+                        [ngClass]="isAdmin() ? 'bg-amber-400' : 'bg-emerald-400'"></span>
+                  {{getUserRol()}}
+                </p>
+              </div>
+              
+              <!-- Opciones -->
+              <div class="py-1">
+                <button 
+                  class="w-full px-4 py-2.5 text-left text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-3 transition-colors"
+                  routerLink="/admin-tareas/configuracion"
+                  (click)="userMenuOpen = false">
+                  <lucide-icon name="settings" [size]="16" class="text-gray-400"></lucide-icon>
+                  Configuración
+                </button>
+              </div>
+              
+              <!-- Cerrar sesión -->
+              <div class="border-t border-gray-100 pt-1 mt-1">
+                <button 
+                  class="w-full px-4 py-2.5 text-left text-sm text-red-600 hover:bg-red-50 flex items-center gap-3 transition-colors"
+                  (click)="cerrarSesion()">
+                  <lucide-icon name="log-out" [size]="16"></lucide-icon>
+                  Cerrar sesión
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
 
       <!-- Tabs -->
       <div class="flex gap-2 border-b border-gray-200">
         <button 
-          class="px-4 py-2 text-sm font-medium transition-colors"
+          class="px-4 py-2 text-sm font-medium transition-colors flex items-center gap-2"
           [class.text-blue-600]="selectedTab === 'mis-tareas'"
           [class.border-b-2]="selectedTab === 'mis-tareas'"
           [class.border-blue-600]="selectedTab === 'mis-tareas'"
           [class.text-gray-600]="selectedTab !== 'mis-tareas'"
           (click)="segmentChanged('mis-tareas')">
+          <lucide-icon name="list-todo" [size]="18"></lucide-icon>
           Mis Tareas
         </button>
         <button 
-          class="px-4 py-2 text-sm font-medium transition-colors"
+          class="px-4 py-2 text-sm font-medium transition-colors flex items-center gap-2"
           [class.text-blue-600]="selectedTab === 'actividades'"
           [class.border-b-2]="selectedTab === 'actividades'"
           [class.border-blue-600]="selectedTab === 'actividades'"
           [class.text-gray-600]="selectedTab !== 'actividades'"
           (click)="segmentChanged('actividades')">
+          <lucide-icon name="folder-kanban" [size]="18"></lucide-icon>
           Actividades
         </button>
         <button 
-          class="px-4 py-2 text-sm font-medium transition-colors"
+          class="px-4 py-2 text-sm font-medium transition-colors flex items-center gap-2"
           [class.text-blue-600]="selectedTab === 'tareas-sin-asignar'"
           [class.border-b-2]="selectedTab === 'tareas-sin-asignar'"
           [class.border-blue-600]="selectedTab === 'tareas-sin-asignar'"
           [class.text-gray-600]="selectedTab !== 'tareas-sin-asignar'"
           (click)="segmentChanged('tareas-sin-asignar')">
+          <lucide-icon name="users" [size]="18"></lucide-icon>
           Sin Asignar
         </button>
       </div>
@@ -72,7 +132,7 @@
             <p class="text-xs text-yellow-600 uppercase font-medium">Pendientes</p>
             <p class="text-2xl font-bold text-yellow-700">{{resumen.totalTareas - resumen.tareasCompletadas - resumen.tareasEnProgreso}}</p>
           </div>
-          <i class="pi pi-clock text-3xl text-yellow-500"></i>
+          <lucide-icon name="clock" [size]="32" class="text-yellow-500"></lucide-icon>
         </div>
       </div>
 
@@ -82,7 +142,7 @@
             <p class="text-xs text-blue-600 uppercase font-medium">En Progreso</p>
             <p class="text-2xl font-bold text-blue-700">{{resumen.tareasEnProgreso}}</p>
           </div>
-          <i class="pi pi-spin pi-spinner text-3xl text-blue-500"></i>
+          <lucide-icon name="loader" [size]="32" class="text-blue-500 "></lucide-icon>
         </div>
       </div>
 
@@ -92,7 +152,7 @@
             <p class="text-xs text-green-600 uppercase font-medium">Completadas</p>
             <p class="text-2xl font-bold text-green-700">{{resumen.tareasCompletadas}}/{{resumen.totalTareas}}</p>
           </div>
-          <i class="pi pi-check-circle text-3xl text-green-500"></i>
+          <lucide-icon name="check-circle" [size]="32" class="text-green-500"></lucide-icon>
         </div>
       </div>
     </div>
@@ -100,24 +160,43 @@
     <!-- Barra de búsqueda y filtros -->
     <div class="flex gap-3 mb-6">
       <div class="flex-1 relative">
-        <i class="pi pi-search absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
+        <lucide-icon name="search" [size]="18" class="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"></lucide-icon>
         <input 
           type="text" 
           class="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
-          placeholder="Buscar tareas..."
+          [placeholder]="selectedTab === 'actividades' ? 'Buscar actividades...' : 'Buscar tareas...'"
           [(ngModel)]="searchTerm"
           (input)="onSearchInput($event)">
       </div>
+      
+      <!-- Botón Nueva Tarea (visible en mis-tareas y sin-asignar) -->
+      <button 
+        *ngIf="selectedTab === 'mis-tareas' || selectedTab === 'tareas-sin-asignar'"
+        class="px-4 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-all flex items-center gap-2 font-medium shadow-sm"
+        (click)="crearNuevaTarea()">
+        <lucide-icon name="plus" [size]="18"></lucide-icon>
+        <span>Nueva Tarea</span>
+      </button>
+      
+      <!-- Botón Nueva Actividad (visible en actividades) -->
+      <button 
+        *ngIf="selectedTab === 'actividades'"
+        class="px-4 py-2.5 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-all flex items-center gap-2 font-medium shadow-sm"
+        (click)="crearNuevaActividad()">
+        <lucide-icon name="plus" [size]="18"></lucide-icon>
+        <span>Nueva Actividad</span>
+      </button>
+      
       <button 
         class="px-5 py-2.5 bg-white border-2 border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 hover:border-blue-500 hover:text-blue-600 transition-all flex items-center gap-2 font-medium shadow-sm"
         [class.border-blue-500]="filtrosActivos"
         [class.bg-blue-50]="filtrosActivos"
         [class.text-blue-600]="filtrosActivos"
         (click)="abrirFiltros()">
-        <i class="pi pi-filter text-base"></i>
+        <lucide-icon name="filter" [size]="18"></lucide-icon>
         <span>Filtros</span>
         <span *ngIf="filtrosActivos" class="bg-blue-600 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
-          <i class="pi pi-check text-[10px]"></i>
+          <lucide-icon name="check" [size]="10"></lucide-icon>
         </span>
       </button>
     </div>
@@ -137,7 +216,7 @@
 
     <!-- Loading -->
     <div *ngIf="isLoading" class="flex justify-center py-12">
-      <i class="pi pi-spin pi-spinner text-4xl text-blue-600"></i>
+      <lucide-icon name="loader" [size]="40" class="text-blue-600 "></lucide-icon>
     </div>
 
     <!-- Contenido de tabs -->
@@ -146,27 +225,28 @@
         *ngIf="selectedTab === 'mis-tareas'"
         [tareas]="tareasFiltradas"
         [tareaRecienAnadida]="tareaRecienAnadida"
+        [rutaDetalle]="'/admin-tareas/tarea'"
         (completarTareaEvento)="completarTarea($event)">
       </app-mis-tareas>
 
       <!-- Tab Actividades -->
       <div *ngIf="selectedTab === 'actividades'" class="flex flex-col gap-3">
-        <div *ngFor="let actividad of actividades" 
+        <div *ngFor="let actividad of actividadesFiltradas" 
              class="bg-white rounded-lg border border-gray-200 p-4 cursor-pointer hover:shadow-md transition-shadow"
-             (click)="verDetalleActividad(actividad.actividades_id.toString())">
+             (click)="verDetalleActividad((actividad.actividades_id || actividad.id)?.toString() || '')">
           <div class="flex justify-between items-start gap-2 mb-3">
             <div class="flex-1">
-              <div class="text-xs text-gray-500 mb-1">ID-{{actividad.actividades_id.toString().padStart(3, '0')}}</div>
-              <h3 class="text-sm font-semibold text-gray-900">{{actividad.actividades_titulo}}</h3>
-              <p class="text-xs text-gray-600 mt-1" *ngIf="actividad.actividades_descripcion">{{actividad.actividades_descripcion}}</p>
+              <div class="text-xs text-gray-500 mb-1">ID-{{(actividad.actividades_id || actividad.id)?.toString()?.padStart(3, '0')}}</div>
+              <h3 class="text-sm font-semibold text-gray-900">{{actividad.actividades_titulo || actividad.nombre}}</h3>
+              <p class="text-xs text-gray-600 mt-1" *ngIf="actividad.actividades_descripcion || actividad.descripcion">{{actividad.actividades_descripcion || actividad.descripcion}}</p>
             </div>
             <span class="px-2 py-1 rounded-full text-xs font-medium whitespace-nowrap"
                   [ngClass]="{
-                    'bg-green-50 text-green-600': actividad.actividades_estado === 'COMPLETADA',
-                    'bg-blue-50 text-blue-600': actividad.actividades_estado === 'ACTIVA',
-                    'bg-gray-50 text-gray-600': actividad.actividades_estado === 'PAUSADA'
+                    'bg-green-50 text-green-600': (actividad.progreso_porcentaje || 0) === 100,
+                    'bg-blue-50 text-blue-600': (actividad.progreso_porcentaje || 0) > 0 && (actividad.progreso_porcentaje || 0) < 100,
+                    'bg-gray-50 text-gray-600': (actividad.progreso_porcentaje || 0) === 0
                   }">
-              {{actividad.actividades_estado}}
+              {{(actividad.progreso_porcentaje || 0) === 100 ? 'COMPLETADA' : (actividad.progreso_porcentaje || 0) > 0 ? 'EN PROGRESO' : 'PENDIENTE'}}
             </span>
           </div>
           
@@ -174,24 +254,24 @@
             <div class="flex items-center gap-4">
               <div class="flex items-center gap-2">
                 <i class="pi pi-list"></i>
-                <span>{{actividad.total_tareas}} tarea(s)</span>
+                <span>{{actividad.total_tareas || 0}} tarea(s)</span>
               </div>
               <div class="flex items-center gap-2">
                 <i class="pi pi-check-circle text-green-600"></i>
-                <span>{{actividad.tareas_completadas}} completadas</span>
+                <span>{{actividad.tareas_completadas || 0}} completadas</span>
               </div>
               <div class="flex items-center gap-2">
                 <i class="pi pi-clock text-yellow-600"></i>
-                <span>{{actividad.tareas_pendientes}} pendientes</span>
+                <span>{{actividad.tareas_pendientes || 0}} pendientes</span>
               </div>
             </div>
             
             <div class="flex items-center gap-2 mt-2">
-              <span class="text-xs font-medium">Progreso: {{actividad.progreso_porcentaje}}%</span>
+              <span class="text-xs font-medium">Progreso: {{actividad.progreso_porcentaje || 0}}%</span>
             </div>
             <div class="w-full bg-gray-200 rounded-full h-2">
               <div class="bg-blue-600 h-2 rounded-full transition-all duration-300"
-                   [style.width.%]="actividad.progreso_porcentaje">
+                   [style.width.%]="actividad.progreso_porcentaje || 0">
               </div>
             </div>
           </div>
@@ -212,6 +292,7 @@
         *ngIf="selectedTab === 'tareas-sin-asignar'"
         [tareas]="tareasFiltradas"
         [tareasSeleccionadas]="tareasSeleccionadas"
+        [rutaDetalle]="'/admin-tareas/tarea'"
         (toggleSeleccion)="toggleSeleccionTarea($event)"
         (asignarTareas)="asignarTareasSeleccionadas()">
       </app-equipos-tareas>

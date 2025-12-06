@@ -47,6 +47,7 @@
               [ngClass]="{
                 'bg-yellow-500 text-white': tareaAdminSeleccionada?.estado === 'Pendiente',
                 'bg-blue-500 text-white': tareaAdminSeleccionada?.estado === 'En progreso',
+                'bg-orange-500 text-white': tareaAdminSeleccionada?.estado === 'Pausada',
                 'bg-green-500 text-white': tareaAdminSeleccionada?.estado === 'Completada'
               }">
           {{tareaAdminSeleccionada?.estado || 'Pendiente'}}
@@ -65,11 +66,11 @@
     <!-- Información de la tarea -->
     <div class="bg-white rounded-lg p-4 mb-6">
       <div class="grid grid-cols-2 gap-4 mb-3">
-        <div class="flex items-center gap-2 text-sm">
+        <!-- <div class="flex items-center gap-2 text-sm">
           <i class="pi pi-tag text-gray-500"></i>
           <span class="text-gray-600">Categoría:</span>
           <span class="font-medium text-black">{{tareaAdminSeleccionada?.Categoria || 'Sin categoría'}}</span>
-        </div>
+        </div> -->
         <div class="flex items-center gap-2 text-sm">
           <i class="pi pi-building text-gray-500"></i>
           <span class="text-gray-600">Sucursal:</span>
@@ -77,11 +78,7 @@
         </div>
       </div>
       <div class="grid grid-cols-3 gap-4">
-        <div class="flex items-center gap-2 text-sm">
-          <i class="pi pi-clock text-gray-500"></i>
-          <span class="text-gray-600">Programada:</span>
-          <span class="font-medium text-gray-900">{{tareaAdminSeleccionada?.horaprogramada || '--:--'}}</span>
-        </div>
+        
         <div class="flex items-center gap-2 text-sm">
           <i class="pi pi-clock text-gray-500"></i>
           <span class="text-gray-600">Inicio:</span>
@@ -143,6 +140,7 @@
                  [ngClass]="{
                    'bg-green-500 text-white': subtarea.estado === 'Completada',
                    'bg-blue-500 text-white': subtarea.estado === 'En progreso',
+                   'bg-orange-500 text-white': subtarea.estado === 'Pausada',
                    'bg-yellow-500 text-white': subtarea.estado === 'Pendiente'
                  }">
               <span class="text-xs font-medium">{{subtarea.estado}}</span>
@@ -151,14 +149,14 @@
             <h4 class="text-sm font-semibold text-gray-900 mb-2 pr-20">{{subtarea.titulo}}</h4>
             
             <div class="space-y-1 text-xs text-gray-600">
-              <div class="flex items-center gap-2">
+              <!-- <div class="flex items-center gap-2">
                 <i class="pi pi-user text-gray-400"></i>
                 <span>Responsable: {{subtarea.usuarioasignado}}</span>
-              </div>
-              <div class="flex items-center gap-2">
+              </div> -->
+              <!-- <div class="flex items-center gap-2">
                 <i class="pi pi-tag text-gray-400"></i>
                 <span>Subcategoría: {{subtarea.Categoria}}</span>
-              </div>
+              </div> -->
               <div class="flex items-center gap-2">
                 <i class="pi pi-clock text-gray-400"></i>
                 <span>Hora: {{subtarea.horainicio}}</span>

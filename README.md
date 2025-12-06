@@ -56,7 +56,6 @@ Este proyecto implementa un sistema de gestión de tareas con control de acceso 
 - JWT con roles en el payload
 - Guards en frontend y middleware en backend
 - Redirección automática según permisos
-
 ---
 
 ## Cómo probar

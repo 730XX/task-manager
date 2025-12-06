@@ -1,8 +1,13 @@
 import { Component, OnInit } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { Location } from '@angular/common';
-import { ActividadesService } from '../../../../core/services/actividades.service';
+import { ActividadesService } from '../../../../core/services';
+import { SucursalesService } from '../../../../core/services/sucursales.service';
+import { Sucursal } from '../../../../core/interfaces/sucursal.interface';
+import { ActualizarActividadRequest } from '../../../../core/interfaces/actividad.interface';
+import { isSuccess, ApiResponse } from '../../../../core/interfaces/api-response.interface';
 import { MessageService } from 'primeng/api';
+import { forkJoin } from 'rxjs';
 
 @Component({
   selector: 'app-editar-actividad',
@@ -14,12 +19,14 @@ export class EditarActividad implements OnInit {
   actividadId: string = '';
   titulo: string = '';
   descripcion: string = '';
-  sucursal: string = '';
-  fechaProgramada: Date | null = null;
-  horaInicio: Date | null = null;
-  horaFin: Date | null = null;
+  sucursalId: string | null = null;
+  fechaInicio: Date | null = null;
+  fechaFin: Date | null = null;
   estado: 'PENDIENTE' | 'EN_PROGRESO' | 'COMPLETADA' | 'ACTIVA' | 'PAUSADA' = 'PENDIENTE';
   isLoading: boolean = false;
+
+  // Catálogos
+  sucursalesDisponibles: Sucursal[] = [];
 
   estados = [
     { label: 'Pendiente', value: 'PENDIENTE' },
@@ -32,6 +39,7 @@ export class EditarActividad implements OnInit {
     private router: Router,
     private location: Location,
     private actividadesService: ActividadesService,
+    private sucursalesService: SucursalesService,
     private messageService: MessageService
   ) {}
 
@@ -39,38 +47,39 @@ export class EditarActividad implements OnInit {
     const id = this.route.snapshot.paramMap.get('id');
     if (id) {
       this.actividadId = id;
-      this.cargarActividad(id);
+      this.cargarDatos(id);
     }
   }
 
-  cargarActividad(id: string): void {
+  cargarDatos(id: string): void {
     this.isLoading = true;
-    this.actividadesService.getActividadPorId(Number(id)).subscribe({
-      next: (response) => {
-        if (response.tipo === 1 && response.data.actividad) {
-          const act = response.data.actividad;
+    
+    // Cargar sucursales y actividad en paralelo
+    forkJoin({
+      sucursales: this.sucursalesService.obtenerTodas(),
+      actividad: this.actividadesService.obtenerPorId(Number(id))
+    }).subscribe({
+      next: (result) => {
+        // Procesar sucursales
+        if (isSuccess(result.sucursales) && result.sucursales.data) {
+          this.sucursalesDisponibles = result.sucursales.data;
+        }
+        
+        // Procesar actividad
+        if (isSuccess(result.actividad) && result.actividad.data) {
+          const act = result.actividad.data;
           
-          this.titulo = act.actividades_titulo || '';
-          this.descripcion = act.actividades_descripcion || '';
-          this.sucursal = act.actividades_sucursal || '';
-          this.estado = act.actividades_estado || 'PENDIENTE';
+          this.titulo = act.nombre || '';
+          this.descripcion = act.descripcion || '';
+          this.sucursalId = act.sucursal_id ? String(act.sucursal_id) : null;
+          this.estado = (act.actividades_estado as any) || 'PENDIENTE';
           
-          // Convertir fecha programada
-          if (act.actividades_fecha_programada) {
-            this.fechaProgramada = new Date(act.actividades_fecha_programada);
+          // Convertir fechas
+          if (act.fecha_inicio) {
+            this.fechaInicio = new Date(act.fecha_inicio);
           }
-          
-          // Convertir horas a Date objects para p-datepicker con timeOnly
-          if (act.actividades_hora_inicio) {
-            const [hours, minutes] = act.actividades_hora_inicio.split(':');
-            this.horaInicio = new Date();
-            this.horaInicio.setHours(parseInt(hours), parseInt(minutes), 0);
-          }
-          
-          if (act.actividades_hora_fin) {
-            const [hours, minutes] = act.actividades_hora_fin.split(':');
-            this.horaFin = new Date();
-            this.horaFin.setHours(parseInt(hours), parseInt(minutes), 0);
+          if (act.fecha_fin) {
+            this.fechaFin = new Date(act.fecha_fin);
           }
         }
         this.isLoading = false;
@@ -79,7 +88,7 @@ export class EditarActividad implements OnInit {
         this.messageService.add({
           severity: 'error',
           summary: 'Error',
-          detail: error.error?.mensajes?.[0] || 'Error al cargar la actividad',
+          detail: error.error?.mensajes?.[0] || 'Error al cargar datos',
           life: 3000
         });
         this.isLoading = false;
@@ -100,11 +109,11 @@ export class EditarActividad implements OnInit {
       return;
     }
 
-    if (!this.fechaProgramada) {
+    if (!this.fechaInicio) {
       this.messageService.add({
         severity: 'warn',
         summary: 'Campo requerido',
-        detail: 'Debe seleccionar una fecha programada',
+        detail: 'Debe seleccionar una fecha de inicio',
         life: 3000
       });
       return;
@@ -112,47 +121,21 @@ export class EditarActividad implements OnInit {
 
     this.isLoading = true;
 
-    // Formatear fecha programada
-    const fechaStr = this.fechaProgramada.toISOString().slice(0, 10);
-    
-    // Formatear horas
-    let horaInicioStr: string | undefined = undefined;
-    let horaFinStr: string | undefined = undefined;
-    
-    if (this.horaInicio) {
-      const hours = this.horaInicio.getHours().toString().padStart(2, '0');
-      const minutes = this.horaInicio.getMinutes().toString().padStart(2, '0');
-      horaInicioStr = `${hours}:${minutes}:00`;
-    }
-    
-    if (this.horaFin) {
-      const hours = this.horaFin.getHours().toString().padStart(2, '0');
-      const minutes = this.horaFin.getMinutes().toString().padStart(2, '0');
-      horaFinStr = `${hours}:${minutes}:00`;
-    }
+    // Formatear fechas a formato MySQL datetime
+    const fechaInicioStr = this.fechaInicio.toISOString().slice(0, 19).replace('T', ' ');
+    const fechaFinStr = this.fechaFin ? this.fechaFin.toISOString().slice(0, 19).replace('T', ' ') : undefined;
 
-    const request: any = {
-      titulo: this.titulo.trim(),
-      fecha_programada: fechaStr,
-      estado: this.estado
+    const request: ActualizarActividadRequest = {
+      nombre: this.titulo.trim(),
+      fecha_inicio: fechaInicioStr,
+      fecha_fin: fechaFinStr,
+      descripcion: this.descripcion?.trim() || undefined,
+      sucursal_id: this.sucursalId ? Number(this.sucursalId) : undefined
     };
 
-    if (this.descripcion?.trim()) {
-      request.descripcion = this.descripcion.trim();
-    }
-    if (this.sucursal?.trim()) {
-      request.sucursal = this.sucursal.trim();
-    }
-    if (horaInicioStr) {
-      request.hora_inicio = horaInicioStr;
-    }
-    if (horaFinStr) {
-      request.hora_fin = horaFinStr;
-    }
-
-    this.actividadesService.actualizarActividad(Number(this.actividadId), request).subscribe({
-      next: (response) => {
-        if (response.tipo === 1) {
+    this.actividadesService.actualizar(Number(this.actividadId), request).subscribe({
+      next: (response :any) => {
+        if (isSuccess(response)) {
           this.messageService.add({
             severity: 'success',
             summary: 'Éxito',
@@ -166,7 +149,7 @@ export class EditarActividad implements OnInit {
         }
         this.isLoading = false;
       },
-      error: (error) => {
+      error: (error: any) => {
         this.isLoading = false;
         this.messageService.add({
           severity: 'error',
@@ -183,6 +166,6 @@ export class EditarActividad implements OnInit {
   }
 
   get puedeGuardar(): boolean {
-    return !!(this.titulo && this.titulo.trim().length >= 5 && this.fechaProgramada);
+    return !!(this.titulo && this.titulo.trim().length >= 5 && this.fechaInicio);
   }
 }

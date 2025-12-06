@@ -1,25 +1,41 @@
+import { ApiResponse, TipoRespuesta } from './api-response.interface';
+import { Usuario } from './usuario.interface';
+
+/**
+ * Request para login
+ */
 export interface LoginRequest {
-  usuario: string;
+  username: string;
   password: string;
 }
 
-export interface LoginResponse {
-  tipo: number; // 1=success, 2=warning, 3=error
-  mensajes: string[];
-  data?: {
-    token: string;
-    usuario_id: number;
-    rol: string;
-  };
-}
+/**
+ * Respuesta de login - El backend devuelve el Usuario completo con token
+ * Usa la estructura estándar ApiResponse<Usuario>
+ */
+export type LoginResponse = ApiResponse<Usuario>;
 
-export interface User {
-  usuario_id: number;
-  rol: string;
+/**
+ * Usuario autenticado almacenado en el frontend
+ * Subconjunto de Usuario con los campos necesarios para auth
+ */
+export interface AuthUser {
+  id: number;
+  nombre_completo: string;
+  username: string;
+  rol_id: number;
   token: string;
 }
 
-export interface LogoutResponse {
-  tipo: number; // 1=success, 2=warning, 3=error
-  mensajes: string[];
+/**
+ * Respuesta de logout
+ */
+export type LogoutResponse = ApiResponse<null>;
+
+/**
+ * Helper para verificar si el login fue exitoso
+ */
+export function isLoginSuccess(response: LoginResponse): boolean {
+  return response.tipo === TipoRespuesta.SUCCESS && !!response.data?.token;
 }
+

@@ -1,6 +1,6 @@
 import { Component, Input, OnInit, Output, EventEmitter } from '@angular/core';
 import { Router } from '@angular/router';
-import { TareasService } from '../../services/tareas.service';
+import { TareasService } from '../../../../core/services/tareas.service';
 
 @Component({
   selector: 'app-filtros-admin-modal',

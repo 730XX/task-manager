@@ -1,54 +1,35 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { Observable } from 'rxjs';
+import { Observable, Subject } from 'rxjs';
 import { environment } from '../../../environments/environments';
+import { 
+  ApiResponse 
+} from '../interfaces/api-response.interface';
+import { 
+  Tarea, 
+  CrearTareaRequest, 
+  ActualizarTareaRequest,
+  HistorialTarea,
+  ComentarioCompletado
+} from '../interfaces/tarea.interface';
 
-// Interfaces de respuesta del backend
-export interface ApiResponse<T = any> {
-  tipo: number; // 1=success, 2=warning, 3=error
-  mensajes: string[];
-  data: T;
+// Re-exportar tipos para compatibilidad
+export type { Tarea, CrearTareaRequest, ActualizarTareaRequest, HistorialTarea, ComentarioCompletado };
+
+// Importamos Categoria desde la interfaz centralizada
+import { Categoria } from '../interfaces/categoria.interface';
+export type { Categoria };
+
+/** Interface para la asignación de una tarea */
+export interface AsignacionTarea {
+  id: string;
+  tarea_id: string;
+  usuario_asignado_id: string | null;
+  cargo_asignado_id: string | null;
+  fecha_asignacion: string;
 }
 
-export interface Tarea {
-  tareas_id: number;
-  tareas_titulo: string;
-  tareas_descripcion?: string;
-  tareas_prioridad: 'ALTA' | 'MEDIA' | 'BAJA';
-  tareas_estado: 'PENDIENTE' | 'EN_PROGRESO' | 'COMPLETADA';
-  tareas_fecha_programada: string;
-  tareas_fecha_completado?: string;
-  tareas_reabierta: number; // 0 o 1
-  usuarios_id?: number | null;
-  categoria_id?: number;
-  categoria_nombre?: string | null;
-  categoria_color?: string | null;
-  actividades_id?: number | null;
-  actividad_titulo?: string | null;
-  responsable_nombre?: string | null;
-  color_prioridad?: string;
-  tareas_creado?: string;
-}
-
-export interface CrearTareaRequest {
-  titulo: string;
-  descripcion?: string;
-  prioridad?: 'ALTA' | 'MEDIA' | 'BAJA';
-  fecha_programada: string;
-  categoria_id?: number;
-  actividades_id?: number;
-  usuarios_id?: number;
-}
-
-export interface ActualizarTareaRequest {
-  titulo: string;
-  descripcion?: string;
-  prioridad?: 'ALTA' | 'MEDIA' | 'BAJA';
-  fecha_programada: string;
-  categoria_id?: number | null;
-  usuarios_id?: number | null;
-}
-
+/** Interface para request de reabrir tarea */
 export interface ReabrirTareaRequest {
   motivo: 'ERROR_EJECUCION' | 'INFORMACION_INCOMPLETA' | 'CAMBIO_REQUERIMIENTOS' | 'SOLICITUD_CLIENTE' | 'CORRECCION_CALIDAD' | 'OTROS';
   observaciones: string;
@@ -56,103 +37,255 @@ export interface ReabrirTareaRequest {
   fecha_vencimiento_nueva?: string;
 }
 
-
 @Injectable({
   providedIn: 'root'
 })
 export class TareasService {
-  private apiUrl = environment.tareasApiUrl;
+  private readonly API_URL = `${environment.apiUrl}/tareas`;
+
+  // === Subjects para notificaciones reactivas ===
+  
+  /** Subject para notificar cambios en tareas/subtareas */
+  private tareasActualizadasSubject = new Subject<void>();
+  public tareasActualizadas$ = this.tareasActualizadasSubject.asObservable();
+
+  /** Subject para cambios en el título de subtareas */
+  private tituloSubtareasSubject = new Subject<string>();
+  public tituloSubtareas$ = this.tituloSubtareasSubject.asObservable();
+
+  /** Propiedades auxiliares para compatibilidad */
+  public apartadoadmin: boolean = false;
+  public usuarioActual: string = '';
 
   constructor(private http: HttpClient) {}
 
+  // === Métodos de notificación ===
+
+  /** Emite evento cuando las tareas han sido actualizadas */
+  notificarActualizacion(): void {
+    this.tareasActualizadasSubject.next();
+  }
+
+  /** Emite evento con nuevo título de subtareas */
+  actualizarTituloSubtareas(titulo: string): void {
+    this.tituloSubtareasSubject.next(titulo);
+  }
+
+  // === Métodos de Catálogos (GET) ===
+
+  /**
+   * GET /categorias/listar-categorias
+   * Obtiene todas las categorías
+   */
+  obtenerCategorias(): Observable<ApiResponse<Categoria[]>> {
+    return this.http.get<ApiResponse<Categoria[]>>(`${environment.apiUrl}/categorias/listar-categorias`);
+  }
+
+  /**
+   * GET /categorias/listar-subcategorias
+   * Obtiene todas las subcategorías
+   */
+  obtenerSubcategorias(): Observable<ApiResponse<any[]>> {
+    return this.http.get<ApiResponse<any[]>>(`${environment.apiUrl}/categorias/listar-subcategorias`);
+  }
+
+  /**
+   * GET /sucursales/listar-sucursales
+   * Obtiene todas las sucursales
+   */
+  obtenerSucursales(): Observable<ApiResponse<any[]>> {
+    return this.http.get<ApiResponse<any[]>>(`${environment.apiUrl}/sucursales/listar-sucursales`);
+  }
+
+  // === Métodos HTTP ===
+
+  /**
+   * GET /tareas/listar-tareas
+   * Obtiene todas las tareas (requiere auth)
+   */
+  obtenerTodas(): Observable<ApiResponse<Tarea[]>> {
+    return this.http.get<ApiResponse<Tarea[]>>(`${this.API_URL}/listar-tareas`);
+  }
+
   /**
    * GET /tareas/mis-tareas
-   * Obtiene las tareas asignadas al usuario autenticado
+   * Obtiene las tareas del usuario autenticado (requiere auth)
    */
-  getMisTareas(): Observable<ApiResponse<{ tareas: Tarea[] }>> {
-    return this.http.get<ApiResponse<{ tareas: Tarea[] }>>(`${this.apiUrl}/mis-tareas`);
+  obtenerMisTareas(): Observable<ApiResponse<Tarea[]>> {
+    return this.http.get<ApiResponse<Tarea[]>>(`${this.API_URL}/mis-tareas`);
   }
 
   /**
-   * GET /tareas/disponibles
-   * Obtiene tareas sin asignar (disponibles para tomar)
+   * GET /tareas/tareas-sin-asignar
+   * Obtiene las tareas sin asignar (disponibles) (requiere auth)
    */
-  getTareasDisponibles(): Observable<ApiResponse<{ tareas: Tarea[] }>> {
-    return this.http.get<ApiResponse<{ tareas: Tarea[] }>>(`${this.apiUrl}/disponibles`);
+  obtenerTareasSinAsignar(): Observable<ApiResponse<Tarea[]>> {
+    return this.http.get<ApiResponse<Tarea[]>>(`${this.API_URL}/tareas-sin-asignar`);
   }
 
   /**
-   * GET /tareas/:id
-   * Obtiene el detalle de una tarea por ID
+   * GET /tareas/obtener-tarea/:id
+   * Obtiene una tarea por ID (requiere auth)
    */
-  getTareaPorId(id: number): Observable<ApiResponse<{ tarea: Tarea }>> {
-    return this.http.get<ApiResponse<{ tarea: Tarea }>>(`${this.apiUrl}/${id}`);
+  obtenerPorId(id: number): Observable<ApiResponse<Tarea>> {
+    return this.http.get<ApiResponse<Tarea>>(`${this.API_URL}/obtener-tarea/${id}`);
   }
 
   /**
-   * POST /tareas
-   * Crea una nueva tarea
+   * GET /tareas/obtener-asignacion/:id
+   * Obtiene la asignación de una tarea (usuario o cargo asignado)
    */
-  crearTarea(data: CrearTareaRequest): Observable<ApiResponse<{ id: number }>> {
-    return this.http.post<ApiResponse<{ id: number }>>(`${this.apiUrl}`, data);
+  obtenerAsignacion(tareaId: number): Observable<ApiResponse<AsignacionTarea>> {
+    return this.http.get<ApiResponse<AsignacionTarea>>(`${this.API_URL}/obtener-asignacion/${tareaId}`);
   }
 
   /**
-   * PUT /tareas/:id/asignar
-   * Asigna una tarea disponible al usuario autenticado
+   * POST /tareas/crear-tarea
+   * Crea una nueva tarea (requiere auth)
    */
-  asignarTarea(tareaId: number): Observable<ApiResponse> {
-    return this.http.put<ApiResponse>(`${this.apiUrl}/${tareaId}/asignar`, {});
+  crearTarea(tarea: CrearTareaRequest): Observable<ApiResponse<Tarea>> {
+    return this.http.post<ApiResponse<Tarea>>(`${this.API_URL}/crear-tarea`, tarea);
   }
 
   /**
-   * PUT /tareas/:id/completar
-   * Marca una tarea como completada
+   * PUT /tareas/editar-tarea/:id
+   * Actualiza una tarea existente (requiere auth)
    */
-  completarTarea(tareaId: number): Observable<ApiResponse> {
-    return this.http.put<ApiResponse>(`${this.apiUrl}/${tareaId}/completar`, {});
+  actualizarTarea(id: number, tarea: ActualizarTareaRequest): Observable<ApiResponse<Tarea>> {
+    return this.http.put<ApiResponse<Tarea>>(`${this.API_URL}/editar-tarea/${id}`, tarea);
   }
 
   /**
-   * PUT /tareas/:id
-   * Actualiza una tarea existente
+   * PUT /tareas/asignar-tarea/:id
+   * Asigna una tarea al usuario autenticado (requiere auth)
    */
-  actualizarTarea(tareaId: number, data: ActualizarTareaRequest): Observable<ApiResponse> {
-    return this.http.put<ApiResponse>(`${this.apiUrl}/${tareaId}`, data);
+  asignarTarea(id: number): Observable<ApiResponse<Tarea>> {
+    return this.http.put<ApiResponse<Tarea>>(`${this.API_URL}/asignar-tarea/${id}`, {});
   }
 
   /**
-   * POST /tareas/:id/reapertura
-   * Reabre una tarea completada con motivo y observaciones
+   * PUT /tareas/completar-tarea/:id
+   * Marca una tarea como completada (requiere auth)
+   * @param id ID de la tarea
+   * @param comentario Comentario opcional de completado
    */
-  reabrirTarea(tareaId: number, data: ReabrirTareaRequest): Observable<ApiResponse> {
-    return this.http.post<ApiResponse>(`${this.apiUrl}/${tareaId}/reapertura`, data);
+  completarTarea(id: number, comentario?: string): Observable<ApiResponse<Tarea>> {
+    return this.http.put<ApiResponse<Tarea>>(`${this.API_URL}/completar-tarea/${id}`, { comentario });
   }
 
   /**
-   * GET /tareas/catalogo/categorias
-   * Obtiene el listado de categorías disponibles
+   * PUT /tareas/iniciar-tarea/:id
+   * Inicia una tarea (cambia estado a En Progreso) (requiere auth)
+   * @param id ID de la tarea
+   * @param comentario Comentario opcional
    */
-  getCategorias(): Observable<ApiResponse<{ categorias: Categoria[] }>> {
-    return this.http.get<ApiResponse<{ categorias: Categoria[] }>>(`${this.apiUrl}/catalogo/categorias`);
+  iniciarTarea(id: number, comentario?: string): Observable<ApiResponse<Tarea>> {
+    return this.http.put<ApiResponse<Tarea>>(`${this.API_URL}/iniciar-tarea/${id}`, { comentario });
   }
 
   /**
-   * GET /tareas/catalogo/usuarios
-   * Obtiene el listado de usuarios disponibles
+   * PUT /tareas/pausar-tarea/:id
+   * Pausa una tarea en progreso (requiere auth)
+   * @param id ID de la tarea
+   * @param comentario Comentario opcional
    */
-  getUsuarios(): Observable<ApiResponse<{ usuarios: Usuario[] }>> {
-    return this.http.get<ApiResponse<{ usuarios: Usuario[] }>>(`${this.apiUrl}/catalogo/usuarios`);
+  pausarTarea(id: number, comentario?: string): Observable<ApiResponse<Tarea>> {
+    return this.http.put<ApiResponse<Tarea>>(`${this.API_URL}/pausar-tarea/${id}`, { comentario });
   }
-}
 
-export interface Categoria {
-  categoria_id: number;
-  categoria_nombre: string;
-  categoria_color: string;
-}
+  /**
+   * PUT /tareas/reabrir-tarea/:id
+   * Reabre una tarea completada (requiere auth)
+   */
+  reabrirTarea(id: number, datos: ReabrirTareaRequest): Observable<ApiResponse<Tarea>> {
+    return this.http.put<ApiResponse<Tarea>>(`${this.API_URL}/reabrir-tarea/${id}`, datos);
+  }
 
-export interface Usuario {
-  usuarios_id: number;
-  usuarios_login_hash: string;
+  /**
+   * DELETE /tareas/eliminar-tarea/:id
+   * Elimina una tarea (requiere auth)
+   */
+  eliminar(id: number): Observable<ApiResponse<void>> {
+    return this.http.delete<ApiResponse<void>>(`${this.API_URL}/eliminar-tarea/${id}`);
+  }
+
+  // ==================== HISTORIAL DE TAREAS ====================
+
+  /**
+   * GET /tareas/historial-tarea/:id
+   * Obtiene el historial completo de una tarea
+   */
+  obtenerHistorialTarea(id: number): Observable<ApiResponse<HistorialTarea[]>> {
+    return this.http.get<ApiResponse<HistorialTarea[]>>(`${this.API_URL}/historial-tarea/${id}`);
+  }
+
+  /**
+   * GET /tareas/comentario-completado/:id
+   * Obtiene el comentario de completado de una tarea
+   */
+  obtenerComentarioCompletado(id: number): Observable<ApiResponse<ComentarioCompletado | null>> {
+    return this.http.get<ApiResponse<ComentarioCompletado | null>>(`${this.API_URL}/comentario-completado/${id}`);
+  }
+
+  /**
+   * POST /tareas/agregar-comentario/:id
+   * Agrega un comentario a una tarea
+   */
+  agregarComentario(id: number, comentario: string): Observable<ApiResponse<void>> {
+    return this.http.post<ApiResponse<void>>(`${this.API_URL}/agregar-comentario/${id}`, { comentario });
+  }
+
+  // ==================== CATEGORÍAS ====================
+
+  /**
+   * POST /categorias/agregar-categoria
+   * Crea una nueva categoría
+   */
+  crearCategoria(data: { nombre: string }): Observable<ApiResponse<any>> {
+    return this.http.post<ApiResponse<any>>(`${environment.apiUrl}/categorias/agregar-categoria`, data);
+  }
+
+  /**
+   * PUT /categorias/editar-categoria/:id
+   * Edita una categoría existente
+   */
+  editarCategoria(id: number, data: { nombre: string }): Observable<ApiResponse<any>> {
+    return this.http.put<ApiResponse<any>>(`${environment.apiUrl}/categorias/editar-categoria/${id}`, data);
+  }
+
+  // ==================== SUBCATEGORÍAS ====================
+
+  /**
+   * POST /categorias/agregar-subcategoria
+   * Crea una nueva subcategoría
+   */
+  crearSubcategoria(data: { nombre: string; categoria_id: number | null }): Observable<ApiResponse<any>> {
+    return this.http.post<ApiResponse<any>>(`${environment.apiUrl}/categorias/agregar-subcategoria`, data);
+  }
+
+  /**
+   * PUT /categorias/editar-subcategoria/:id
+   * Edita una subcategoría existente
+   */
+  editarSubcategoria(id: number, data: { nombre: string; categoria_id: number }): Observable<ApiResponse<any>> {
+    return this.http.put<ApiResponse<any>>(`${environment.apiUrl}/categorias/editar-subcategoria/${id}`, data);
+  }
+
+  // ==================== SUCURSALES ====================
+
+  /**
+   * POST /sucursales/crear-sucursal
+   * Crea una nueva sucursal
+   */
+  crearSucursal(data: { nombre: string; direccion: string }): Observable<ApiResponse<any>> {
+    return this.http.post<ApiResponse<any>>(`${environment.apiUrl}/sucursales/crear-sucursal`, data);
+  }
+
+  /**
+   * PUT /sucursales/editar-sucursal/:id
+   * Edita una sucursal existente
+   */
+  editarSucursal(id: number, data: { nombre: string; direccion: string }): Observable<ApiResponse<any>> {
+    return this.http.put<ApiResponse<any>>(`${environment.apiUrl}/sucursales/editar-sucursal/${id}`, data);
+  }
 }

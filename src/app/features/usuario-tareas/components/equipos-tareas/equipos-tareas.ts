@@ -1,7 +1,7 @@
 import { Component, OnInit, Input, Output, EventEmitter } from '@angular/core';
 import { Router } from '@angular/router';
-import { Tarea } from '../../models/tarea.model';
-import { TareasService } from '../../services/tareas.service';
+import { TareaUI } from '../../../../core/interfaces/tarea.interface';
+import { TareasService } from '../../../../core/services/tareas.service';
 
 @Component({
   selector: 'app-equipos-tareas',
@@ -10,8 +10,9 @@ import { TareasService } from '../../services/tareas.service';
   styleUrl: './equipos-tareas.scss',
 })
 export class EquiposTareas implements OnInit {
-  @Input() tareas: Tarea[] = [];
+  @Input() tareas: TareaUI[] = [];
   @Input() tareasSeleccionadas: Set<string> = new Set();
+  @Input() rutaDetalle: string = '/tareas/subtarea-info'; // Ruta por defecto para usuario
   @Output() toggleSeleccion = new EventEmitter<{tareaId: string, event: Event}>();
   @Output() asignarTareas = new EventEmitter<void>();
 
@@ -23,8 +24,8 @@ export class EquiposTareas implements OnInit {
   ngOnInit(): void {}
 
   verDetalleTarea(tareaId: string): void {
-    // Las tareas de equipo son subtareas individuales
-    this.router.navigate(['/tareas/subtarea-info', tareaId]);
+    // Navegar a la ruta configurada (admin o usuario)
+    this.router.navigate([this.rutaDetalle, tareaId]);
   }
 
   onToggleSeleccion(tareaId: string, event: Event): void {
@@ -35,7 +36,7 @@ export class EquiposTareas implements OnInit {
     return this.tareasSeleccionadas.has(tareaId);
   }
 
-  getBorderColor(tarea: Tarea): string {
+  getBorderColor(tarea: TareaUI): string {
     if (tarea.estado === 'Completada') return '#1ed467';
     if (tarea.estado === 'En progreso') return '#3B82F6';
     if (tarea.estado === 'Pendiente') return '#F2A626';
@@ -52,7 +53,7 @@ export class EquiposTareas implements OnInit {
     }
   }
 
-  trackByTareaId(index: number, tarea: Tarea): string {
+  trackByTareaId(index: number, tarea: TareaUI): string {
     return tarea.id;
   }
 }

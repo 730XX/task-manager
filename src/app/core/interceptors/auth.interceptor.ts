@@ -17,8 +17,8 @@ export class AuthInterceptor implements HttpInterceptor {
     // Obtener el token del servicio de autenticación
     const token = this.authService.getToken();
     
-    // Si existe token y la petición no es a /auth/login, agregar el header Authorization
-    if (token && !request.url.includes('/auth/login')) {
+    // Si existe token y la petición no es a /login/login o /login/registro
+    if (token && !request.url.includes('/login/login') && !request.url.includes('/login/registro')) {
       request = request.clone({
         setHeaders: {
           Authorization: `Bearer ${token}`
@@ -32,12 +32,8 @@ export class AuthInterceptor implements HttpInterceptor {
         // Si el error es 401 (No autorizado), cerrar sesión
         if (error.status === 401) {
           // Token inválido o expirado
-          localStorage.removeItem('currentUser');
-          this.router.navigate(['/login'], {
-            queryParams: { returnUrl: this.router.url }
-          });
+          this.authService.logout();
         }
-        
         return throwError(() => error);
       })
     );

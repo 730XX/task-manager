@@ -1,10 +1,15 @@
 import { Component, OnInit } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { Location } from '@angular/common';
-import { TareasService } from '../../../usuario-tareas/services/tareas.service';
-import { Tarea } from '../../../usuario-tareas/models/tarea.model';
-import { TareasService as TareasApiService, Tarea as TareaBackend } from '../../../../core/services/tareas.service';
+import { TareasService, ReabrirTareaRequest } from '../../../../core/services/tareas.service';
+import { CategoriasService } from '../../../../core/services/categorias.service';
+import { Tarea, TareaUI, tareaAUI } from '../../../../core/interfaces/tarea.interface';
+import { Categoria } from '../../../../core/interfaces/categoria.interface';
+import { Subcategoria } from '../../../../core/interfaces/subcategoria.interface';
+import { isSuccess } from '../../../../core/interfaces/api-response.interface';
 import { MessageService } from 'primeng/api';
+import { forkJoin } from 'rxjs';
+import { ReabrirTareaData } from './reabrir-tarea-modal/reabrir-tarea-modal';
 
 @Component({
   selector: 'app-subtarea-detail',
@@ -13,36 +18,76 @@ import { MessageService } from 'primeng/api';
   styleUrl: './subtarea-detail.scss',
 })
 export class SubtareaDetail implements OnInit {
-  tarea: Tarea | null = null;
-  tareaBackend: TareaBackend | null = null;
+  tarea: TareaUI | null = null;
+  tareaBackend: Tarea | null = null;
   comentario: string = '';
   imagenesAdjuntas: string[] = [];
   isLoading: boolean = false;
+  
+  // Modal de reapertura
+  mostrarModalReabrir: boolean = false;
+  isReabriendo: boolean = false;
+  
+  // Mapas para lookup rápido
+  categoriasMap: Map<number, string> = new Map();
+  subcategoriasMap: Map<number, string> = new Map();
 
   constructor(
     private route: ActivatedRoute,
     private router: Router,
     private location: Location,
     public tareasService: TareasService,
-    private tareasApiService: TareasApiService,
+    private categoriasService: CategoriasService,
     private messageService: MessageService
   ) {}
 
   ngOnInit(): void {
     const tareaId = this.route.snapshot.paramMap.get('id');
     if (tareaId) {
-      this.cargarTarea(tareaId);
+      this.cargarDatos(tareaId);
     }
   }
 
-  cargarTarea(id: string): void {
+  cargarDatos(id: string): void {
     this.isLoading = true;
-    this.tareasApiService.getTareaPorId(Number(id)).subscribe({
-      next: (response) => {
-        if (response.tipo === 1 && response.data.tarea) {
-          this.tareaBackend = response.data.tarea;
+    
+    // Cargar tarea, categorías y subcategorías en paralelo
+    forkJoin({
+      tarea: this.tareasService.obtenerPorId(Number(id)),
+      categorias: this.categoriasService.obtenerTodas(),
+      subcategorias: this.categoriasService.obtenerSubcategorias()
+    }).subscribe({
+      next: ({ tarea, categorias, subcategorias }) => {
+        // Construir mapa de categorías
+        if (isSuccess(categorias) && categorias.data) {
+          categorias.data.forEach((cat: Categoria) => {
+            const catId = cat.id || cat.categorias_id;
+            const catNombre = cat.nombre || cat.categorias_nombre;
+            if (catId && catNombre) {
+              this.categoriasMap.set(Number(catId), catNombre);
+            }
+          });
+        }
+        
+        // Construir mapa de subcategorías
+        if (isSuccess(subcategorias) && subcategorias.data) {
+          subcategorias.data.forEach((subcat: Subcategoria) => {
+            if (subcat.id && subcat.nombre) {
+              this.subcategoriasMap.set(Number(subcat.id), subcat.nombre);
+            }
+          });
+        }
+        
+        // Procesar tarea con nombres de categorías
+        if (isSuccess(tarea) && tarea.data) {
+          this.tareaBackend = tarea.data;
+          
+          // Obtener nombres de categoría y subcategoría
+          const categoriaNombre = this.categoriasMap.get(Number(tarea.data.categoria_id)) || 'Sin categoría';
+          const subcategoriaNombre = this.subcategoriasMap.get(Number(tarea.data.subcategoria_id)) || 'Sin subcategoría';
+          
           // Convertir al formato del frontend
-          this.tarea = this.convertirTareaBackend(response.data.tarea);
+          this.tarea = tareaAUI(tarea.data, categoriaNombre, subcategoriaNombre);
         }
         this.isLoading = false;
       },
@@ -59,64 +104,21 @@ export class SubtareaDetail implements OnInit {
     });
   }
 
-  private convertirTareaBackend(tb: TareaBackend): Tarea {
-    // Convertir la prioridad del backend (ALTA, MEDIA, BAJA) al formato del frontend (Alta, Media, Baja)
-    let prioridadFrontend: 'Alta' | 'Media' | 'Baja' = 'Media';
-    if (tb.tareas_prioridad === 'ALTA') prioridadFrontend = 'Alta';
-    else if (tb.tareas_prioridad === 'MEDIA') prioridadFrontend = 'Media';
-    else if (tb.tareas_prioridad === 'BAJA') prioridadFrontend = 'Baja';
-
-    // Formatear fecha programada para mostrar
-    let fechaProgramada = '';
-    let horaInicio = '';
-    let horaFin = '';
-    if (tb.tareas_fecha_programada) {
-      const fecha = new Date(tb.tareas_fecha_programada);
-      fechaProgramada = fecha.toLocaleDateString('es-ES');
-      horaInicio = fecha.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
-    }
-
-    return {
-      id: tb.tareas_id.toString(),
-      titulo: tb.tareas_titulo,
-      descripcion: tb.tareas_descripcion || '',
-      completada: tb.tareas_estado === 'COMPLETADA',
-      estado: this.mapearEstado(tb.tareas_estado),
-      estadodetarea: 'Activo',
-      progreso: tb.tareas_estado === 'COMPLETADA' ? 100 : (tb.tareas_estado === 'EN_PROGRESO' ? 50 : 0),
-      Prioridad: prioridadFrontend,
-      Categoria: tb.categoria_nombre || 'Sin categoría',
-      fechaAsignacion: fechaProgramada,
-      fechaAsignacionTimestamp: tb.tareas_fecha_programada ? new Date(tb.tareas_fecha_programada).getTime() : 0,
-      fechaVencimiento: fechaProgramada,
-      horainicio: horaInicio,
-      horafin: horaFin,
-      totalSubtareas: 0,
-      subtareasCompletadas: 0,
-      usuarioasignado: tb.responsable_nombre || (tb.usuarios_id ? 'Usuario' : undefined)
-    };
-  }
-
-  private mapearEstado(estadoBackend: string): 'Pendiente' | 'En progreso' | 'Completada' | 'Cerrada' | 'Activo' | 'Inactiva' {
-    switch (estadoBackend) {
-      case 'PENDIENTE': return 'Pendiente';
-      case 'EN_PROGRESO': return 'En progreso';
-      case 'COMPLETADA': return 'Completada';
-      default: return 'Pendiente';
-    }
+  cargarTarea(id: string): void {
+    this.cargarDatos(id);
   }
 
   iniciarTarea(): void {
-    if (!this.tarea || this.tarea.estado !== 'Pendiente') return;
+    if (!this.tarea || (this.tarea.estado !== 'Pendiente' && this.tarea.estado !== 'Pausada')) return;
 
     this.isLoading = true;
-    this.tareasApiService.asignarTarea(Number(this.tarea.id)).subscribe({
+    this.tareasService.iniciarTarea(Number(this.tarea.id)).subscribe({
       next: (response) => {
-        if (response.tipo === 1) {
+        if (isSuccess(response)) {
           this.messageService.add({
             severity: 'success',
             summary: 'Tarea iniciada',
-            detail: response.mensajes?.[0] || 'Tarea asignada y en progreso',
+            detail: response.mensajes?.[0] || 'Tarea en progreso',
             life: 3000
           });
           // Recargar los datos de la tarea
@@ -137,19 +139,42 @@ export class SubtareaDetail implements OnInit {
   }
 
   pausarTarea(): void {
-    if (this.tarea && this.tarea.estado === 'En progreso') {
-      this.tarea.estado = 'Pendiente';
-      console.log('Tarea pausada');
-    }
+    if (!this.tarea || this.tarea.estado !== 'En progreso') return;
+
+    this.isLoading = true;
+    this.tareasService.pausarTarea(Number(this.tarea.id)).subscribe({
+      next: (response) => {
+        if (isSuccess(response)) {
+          this.messageService.add({
+            severity: 'success',
+            summary: 'Tarea pausada',
+            detail: response.mensajes?.[0] || 'Tarea pausada correctamente',
+            life: 3000
+          });
+          // Recargar los datos de la tarea
+          this.cargarTarea(this.tarea!.id);
+        }
+        this.isLoading = false;
+      },
+      error: (error) => {
+        this.isLoading = false;
+        this.messageService.add({
+          severity: 'error',
+          summary: 'Error',
+          detail: error.error?.mensajes?.[0] || 'Error al pausar la tarea',
+          life: 3000
+        });
+      }
+    });
   }
 
   completarTarea(): void {
     if (!this.tarea) return;
 
     this.isLoading = true;
-    this.tareasApiService.completarTarea(Number(this.tarea.id)).subscribe({
+    this.tareasService.completarTarea(Number(this.tarea.id)).subscribe({
       next: (response) => {
-        if (response.tipo === 1) {
+        if (isSuccess(response)) {
           this.messageService.add({
             severity: 'success',
             summary: '¡Tarea completada!',
@@ -175,6 +200,55 @@ export class SubtareaDetail implements OnInit {
 
   adjuntarImagen(): void {
     console.log('Abrir selector de imagen');
+  }
+
+  // Métodos para reabrir tarea
+  abrirModalReabrir(): void {
+    this.mostrarModalReabrir = true;
+  }
+
+  cerrarModalReabrir(): void {
+    this.mostrarModalReabrir = false;
+  }
+
+  confirmarReapertura(data: ReabrirTareaData): void {
+    if (!this.tarea) return;
+
+    this.isReabriendo = true;
+    
+    const request: ReabrirTareaRequest = {
+      motivo: data.motivo as any,
+      observaciones: data.observaciones,
+      prioridad_nueva: data.prioridad_nueva,
+      fecha_vencimiento_nueva: data.fecha_vencimiento_nueva
+    };
+
+    this.tareasService.reabrirTarea(Number(this.tarea.id), request).subscribe({
+      next: (response) => {
+        if (isSuccess(response)) {
+          this.messageService.add({
+            severity: 'success',
+            summary: 'Tarea reabierta',
+            detail: 'La tarea se reabrió correctamente y ahora está en estado PENDIENTE',
+            life: 3000
+          });
+          this.mostrarModalReabrir = false;
+          // Recargar los datos de la tarea
+          this.cargarTarea(this.tarea!.id);
+        }
+        this.isReabriendo = false;
+      },
+      error: (error) => {
+        this.isReabriendo = false;
+        const mensaje = error.error?.mensajes?.[0] || 'Error al reabrir la tarea';
+        this.messageService.add({
+          severity: 'error',
+          summary: 'Error',
+          detail: mensaje,
+          life: 4000
+        });
+      }
+    });
   }
 
   goBack(): void {

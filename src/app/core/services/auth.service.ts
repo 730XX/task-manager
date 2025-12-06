@@ -1,33 +1,44 @@
 import { Injectable } from '@angular/core';
-import { HttpClient, HttpHeaders } from '@angular/common/http';
+import { HttpClient } from '@angular/common/http';
 import { BehaviorSubject, Observable, throwError } from 'rxjs';
-import { map, catchError, tap } from 'rxjs/operators';
+import { catchError, tap } from 'rxjs/operators';
 import { Router } from '@angular/router';
 import { environment } from '../../../environments/environments';
-import { LoginRequest, LoginResponse, User, LogoutResponse } from '../interfaces/auth.interface';
+import { 
+  ApiResponse, 
+  TipoRespuesta, 
+  isSuccess 
+} from '../interfaces/api-response.interface';
+import { 
+  Usuario, 
+  RolUsuario
+} from '../interfaces/usuario.interface';
+import { 
+  LoginRequest, 
+  AuthUser
+} from '../interfaces/auth.interface';
 
 @Injectable({
   providedIn: 'root'
 })
 export class AuthService {
-  private apiUrl = environment.apiUrl;
-  private currentUserSubject: BehaviorSubject<User | null>;
-  public currentUser$: Observable<User | null>;
+  private readonly API_URL = `${environment.apiUrl}/login`;
+  private currentUserSubject: BehaviorSubject<AuthUser | null>;
+  public currentUser$: Observable<AuthUser | null>;
 
   constructor(
     private http: HttpClient,
     private router: Router
   ) {
-    // Inicializar el usuario actual desde localStorage
     const storedUser = this.getUserFromStorage();
-    this.currentUserSubject = new BehaviorSubject<User | null>(storedUser);
+    this.currentUserSubject = new BehaviorSubject<AuthUser | null>(storedUser);
     this.currentUser$ = this.currentUserSubject.asObservable();
   }
 
   /**
    * Obtiene el valor actual del usuario
    */
-  public get currentUserValue(): User | null {
+  public get currentUserValue(): AuthUser | null {
     return this.currentUserSubject.value;
   }
 
@@ -43,68 +54,62 @@ export class AuthService {
    * Obtiene el token actual
    */
   public getToken(): string | null {
-    const user = this.currentUserValue;
-    return user ? user.token : null;
+    return this.currentUserValue?.token ?? null;
   }
 
   /**
-   * Obtiene el rol del usuario actual
+   * Obtiene el rol_id del usuario actual
    */
-  public getUserRole(): string | null {
-    const user = this.currentUserValue;
-    return user ? user.rol : null;
+  public getUserRolId(): number | null {
+    return this.currentUserValue?.rol_id ?? null;
   }
 
   /**
-   * Verifica si el usuario tiene un rol específico
-   */
-  public hasRole(role: string): boolean {
-    const userRole = this.getUserRole();
-    return userRole === role;
-  }
-
-  /**
-   * Verifica si el usuario es ADMIN
+   * Verifica si el usuario es ADMIN (rol_id = 1)
    */
   public isAdmin(): boolean {
-    return this.hasRole('ADMIN');
+    return this.getUserRolId() === RolUsuario.ADMIN;
+  }
+
+  /**
+   * Verifica si el usuario es usuario normal (rol_id = 2)
+   */
+  public isUsuarioNormal(): boolean {
+    return this.getUserRolId() === RolUsuario.USUARIO_NORMAL;
   }
 
   /**
    * Login - Autenticación con el backend
+   * POST /login/login
    */
-  login(usuario: string, password: string): Observable<LoginResponse> {
-    const loginData: LoginRequest = {
-      usuario,
-      password
-    };
+  login(username: string, password: string): Observable<ApiResponse<Usuario>> {
+    const loginData: LoginRequest = { username, password };
 
-    return this.http.post<LoginResponse>(`${this.apiUrl}/auth/login`, loginData).pipe(
+    return this.http.post<ApiResponse<Usuario>>(`${this.API_URL}/login`, loginData).pipe(
       tap(response => {
-        // tipo: 1=success, 2=warning, 3=error
-        if (response.tipo === 1 && response.data) {
-          // Guardar usuario en localStorage y actualizar el BehaviorSubject
-          const user: User = {
-            usuario_id: response.data.usuario_id,
-            rol: response.data.rol,
-            token: response.data.token
+        if (isSuccess(response) && response.data) {
+          // Extraer datos del usuario para almacenar
+          // Convertir rol_id a número ya que el backend lo devuelve como string
+          const authUser: AuthUser = {
+            id: Number(response.data.id),
+            nombre_completo: response.data.nombre_completo,
+            username: response.data.username,
+            rol_id: Number(response.data.rol_id),
+            token: response.data.token!
           };
-          this.setUserToStorage(user);
-          this.currentUserSubject.next(user);
+          this.setUserToStorage(authUser);
+          this.currentUserSubject.next(authUser);
         }
       }),
       catchError(error => {
-        // Manejar errores específicos del backend
         let errorMessage = 'Error al iniciar sesión';
         
-        if (error.error && error.error.mensajes && error.error.mensajes.length > 0) {
+        if (error.error?.mensajes?.length > 0) {
           errorMessage = error.error.mensajes[0];
         } else if (error.status === 0) {
           errorMessage = 'No se pudo conectar con el servidor';
         } else if (error.status === 401) {
           errorMessage = 'Credenciales inválidas';
-        } else if (error.status === 403) {
-          errorMessage = 'Cuenta bloqueada temporalmente';
         }
         
         return throwError(() => new Error(errorMessage));
@@ -113,34 +118,34 @@ export class AuthService {
   }
 
   /**
-   * Logout - Cerrar sesión
+   * Registro de nuevo usuario
+   * POST /login/registro
    */
-  logout(): Observable<LogoutResponse> {
-    const token = this.getToken();
-    
-    if (!token) {
-      // Si no hay token, simplemente limpiar el estado local
-      this.clearUserData();
-      return new Observable(observer => {
-        observer.next({ tipo: 1, mensajes: ['Sesión cerrada'] }); // tipo: 1 = success
-        observer.complete();
-      });
-    }
-
-    const headers = new HttpHeaders({
-      'Authorization': `Bearer ${token}`
-    });
-
-    return this.http.post<LogoutResponse>(`${this.apiUrl}/auth/logout`, {}, { headers }).pipe(
-      tap(() => {
-        this.clearUserData();
-      }),
+  registro(data: {
+    nombre_completo: string;
+    username: string;
+    password: string;
+    rol_id?: number;
+    cargo_id?: number;
+  }): Observable<ApiResponse<null>> {
+    return this.http.post<ApiResponse<null>>(`${this.API_URL}/registro`, data).pipe(
       catchError(error => {
-        // Incluso si hay error, limpiar datos locales
-        this.clearUserData();
-        return throwError(() => new Error('Error al cerrar sesión'));
+        let errorMessage = 'Error al registrar usuario';
+        
+        if (error.error?.mensajes?.length > 0) {
+          errorMessage = error.error.mensajes[0];
+        }
+        
+        return throwError(() => new Error(errorMessage));
       })
     );
+  }
+
+  /**
+   * Logout - Cerrar sesión (solo limpia datos locales)
+   */
+  logout(): void {
+    this.clearUserData();
   }
 
   /**
@@ -155,18 +160,24 @@ export class AuthService {
   /**
    * Guarda el usuario en localStorage
    */
-  private setUserToStorage(user: User): void {
+  private setUserToStorage(user: AuthUser): void {
     localStorage.setItem('currentUser', JSON.stringify(user));
   }
 
   /**
    * Obtiene el usuario desde localStorage
    */
-  private getUserFromStorage(): User | null {
+  private getUserFromStorage(): AuthUser | null {
     const userJson = localStorage.getItem('currentUser');
     if (userJson) {
       try {
-        return JSON.parse(userJson) as User;
+        const user = JSON.parse(userJson) as AuthUser;
+        // Asegurar que rol_id sea número
+        if (user && user.rol_id !== undefined) {
+          user.rol_id = Number(user.rol_id);
+          user.id = Number(user.id);
+        }
+        return user;
       } catch {
         return null;
       }

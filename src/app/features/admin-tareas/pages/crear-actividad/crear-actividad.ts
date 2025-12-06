@@ -1,7 +1,9 @@
 import { Component, OnInit } from '@angular/core';
 import { Router } from '@angular/router';
 import { Location } from '@angular/common';
-import { ActividadesService, CrearActividadRequest } from '../../../../core/services/actividades.service';
+import { ActividadesService } from '../../../../core/services/actividades.service';
+import { CrearActividadRequest } from '../../../../core/interfaces/actividad.interface';
+import { isSuccess } from '../../../../core/interfaces/api-response.interface';
 import { MessageService } from 'primeng/api';
 
 @Component({
@@ -65,6 +67,10 @@ export class CrearActividad implements OnInit {
 
     // Construir el request
     const request: CrearActividadRequest = {
+      nombre: this.titulo.trim(),
+      sucursal_id: 1, // TODO: Obtener del selector de sucursales
+      fecha_inicio: this.formatearFecha(this.fechaProgramada),
+      fecha_fin: this.formatearFecha(this.fechaProgramada),
       titulo: this.titulo.trim(),
       estado: this.estado
     };
@@ -80,10 +86,7 @@ export class CrearActividad implements OnInit {
 
     // Fecha programada - formato YYYY-MM-DD
     if (this.fechaProgramada) {
-      const year = this.fechaProgramada.getFullYear();
-      const month = String(this.fechaProgramada.getMonth() + 1).padStart(2, '0');
-      const day = String(this.fechaProgramada.getDate()).padStart(2, '0');
-      request.fecha_programada = `${year}-${month}-${day}`;
+      request.fecha_programada = this.formatearFecha(this.fechaProgramada);
     }
 
     // Hora inicio - formato HH:mm:ss
@@ -100,9 +103,9 @@ export class CrearActividad implements OnInit {
       request.hora_fin = `${hours}:${minutes}:00`;
     }
 
-    this.actividadesService.crearActividad(request).subscribe({
+    this.actividadesService.crear(request).subscribe({
       next: (response) => {
-        if (response.tipo === 1) {
+        if (isSuccess(response)) {
           this.messageService.add({
             severity: 'success',
             summary: 'Éxito',
@@ -126,6 +129,13 @@ export class CrearActividad implements OnInit {
         });
       }
     });
+  }
+
+  private formatearFecha(fecha: Date): string {
+    const year = fecha.getFullYear();
+    const month = String(fecha.getMonth() + 1).padStart(2, '0');
+    const day = String(fecha.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
   }
 
   goBack(): void {

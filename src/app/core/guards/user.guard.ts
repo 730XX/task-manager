@@ -13,21 +13,19 @@ export class UserGuard implements CanActivate {
   ) {}
 
   canActivate(route: ActivatedRouteSnapshot, state: RouterStateSnapshot): boolean {
-    const currentUser = this.authService.currentUserValue;
-    
-    if (currentUser && currentUser.token) {
-      // Si es ADMIN, redirigir a su dashboard
-      if (this.authService.isAdmin()) {
-        this.router.navigate(['/admin-tareas']);
-        return false;
-      }
-      
-      // Usuario normal autenticado, permitir acceso
-      return true;
+    // Verificar si está autenticado
+    if (!this.authService.isAuthenticated()) {
+      this.router.navigate(['/login'], { queryParams: { returnUrl: state.url } });
+      return false;
     }
 
-    // No autenticado, redirigir al login
-    this.router.navigate(['/login'], { queryParams: { returnUrl: state.url } });
-    return false;
+    // Si es ADMIN, redirigir a su dashboard
+    if (this.authService.isAdmin()) {
+      this.router.navigate(['/admin-tareas']);
+      return false;
+    }
+    
+    // Usuario normal autenticado, permitir acceso
+    return true;
   }
 }

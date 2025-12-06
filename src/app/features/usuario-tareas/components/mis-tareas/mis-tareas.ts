@@ -1,7 +1,7 @@
 import { Component, OnInit, OnDestroy, Input, Output, EventEmitter } from '@angular/core';
 import { Router } from '@angular/router';
-import { Tarea } from '../../models/tarea.model';
-import { TareasService } from '../../services/tareas.service';
+import { Tarea, TareaUI } from '../../../../core/interfaces/tarea.interface';
+import { TareasService } from '../../../../core/services/tareas.service';
 import { Subscription } from 'rxjs';
 
 @Component({
@@ -11,8 +11,9 @@ import { Subscription } from 'rxjs';
   styleUrl: './mis-tareas.scss',
 })
 export class MisTareas implements OnInit, OnDestroy {
-  @Input() tareas: Tarea[] = [];
+  @Input() tareas: TareaUI[] = [];
   @Input() tareaRecienAnadida: string = '';
+  @Input() rutaDetalle: string = '/tareas/subtarea-info'; // Ruta por defecto para usuario
   @Output() completarTareaEvento = new EventEmitter<string>();
 
   private subscription: Subscription = new Subscription();
@@ -24,7 +25,7 @@ export class MisTareas implements OnInit, OnDestroy {
 
   ngOnInit(): void {
     this.subscription.add(
-      this.tareasService.subtareasActualizadas$.subscribe(() => {
+      this.tareasService.tareasActualizadas$.subscribe(() => {
         // Refrescar vista
       })
     );
@@ -35,11 +36,11 @@ export class MisTareas implements OnInit, OnDestroy {
   }
 
   verDetalleTarea(tareaId: string): void {
-    // Las tareas del usuario son subtareas individuales
-    this.router.navigate(['/tareas/subtarea-info', tareaId]);
+    // Navegar a la ruta configurada (admin o usuario)
+    this.router.navigate([this.rutaDetalle, tareaId]);
   }
 
-  getBorderColor(tarea: Tarea): string {
+  getBorderColor(tarea: TareaUI): string {
     if (tarea.estado === 'Completada') return '#1ed467';
     if (tarea.estado === 'En progreso') return '#3B82F6';
     if (tarea.estado === 'Pendiente') return '#F2A626';
@@ -56,7 +57,7 @@ export class MisTareas implements OnInit, OnDestroy {
     }
   }
 
-  trackByTareaId(index: number, tarea: Tarea): string {
+  trackByTareaId(index: number, tarea: TareaUI): string {
     return tarea.id;
   }
 }

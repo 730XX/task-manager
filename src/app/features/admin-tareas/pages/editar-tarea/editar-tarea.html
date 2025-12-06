@@ -76,36 +76,76 @@
           </p-select>
         </div>
 
-        <!-- Fecha programada -->
-        <div>
-          <label class="text-sm font-medium text-gray-700 mb-2 block">
-            Fecha programada <span class="text-red-500">*</span>
-          </label>
-          <p-datepicker
-            [(ngModel)]="fechaProgramada"
-            [showIcon]="true"
-            [showTime]="true"
-            hourFormat="24"
-            dateFormat="dd/mm/yy"
-            placeholder="Seleccionar fecha y hora"
-            styleClass="w-full">
-          </p-datepicker>
+        <!-- Fechas en grid de 2 columnas -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <!-- Fecha de Inicio -->
+          <div>
+            <label class="text-sm font-medium text-gray-700 mb-2 block">
+              Fecha de Inicio <span class="text-red-500">*</span>
+            </label>
+            <p-datepicker
+              [(ngModel)]="fechaInicio"
+              [showIcon]="true"
+              [showTime]="true"
+              hourFormat="12"
+              dateFormat="dd/mm/yy"
+              placeholder="Seleccionar fecha y hora"
+              styleClass="w-full">
+            </p-datepicker>
+          </div>
+
+          <!-- Fecha de Fin -->
+          <div>
+            <label class="text-sm font-medium text-gray-700 mb-2 block">
+              Fecha de Fin <span class="text-red-500">*</span>
+            </label>
+            <p-datepicker
+              [(ngModel)]="fechaFin"
+              [showIcon]="true"
+              [showTime]="true"
+              hourFormat="12"
+              dateFormat="dd/mm/yy"
+              placeholder="Seleccionar fecha y hora"
+              styleClass="w-full"
+              [minDate]="fechaInicio">
+            </p-datepicker>
+          </div>
         </div>
 
-        <!-- Categoría -->
-        <div>
-          <label class="text-sm font-medium text-gray-700 mb-2 block">
-            Categoría
-          </label>
-          <p-select
-            [(ngModel)]="categoriaId"
-            [options]="categoriasDisponibles"
-            optionLabel="categoria_nombre"
-            optionValue="categoria_id"
-            placeholder="Seleccionar categoría"
-            [showClear]="true"
-            styleClass="w-full">
-          </p-select>
+        <!-- Categoría y Subcategoría en grid de 2 columnas -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <!-- Categoría -->
+          <div>
+            <label class="text-sm font-medium text-gray-700 mb-2 block">
+              Categoría
+            </label>
+            <p-select
+              [(ngModel)]="categoriaId"
+              [options]="categoriasDisponibles"
+              optionLabel="nombre"
+              optionValue="id"
+              placeholder="Seleccionar categoría"
+              [showClear]="true"
+              styleClass="w-full"
+              (onChange)="onCategoriaChange()">
+            </p-select>
+          </div>
+
+          <!-- Subcategoría (solo aparece si hay categoría seleccionada y tiene subcategorías) -->
+          <div *ngIf="categoriaId && subcategoriasFiltradas.length > 0">
+            <label class="text-sm font-medium text-gray-700 mb-2 block">
+              Subcategoría
+            </label>
+            <p-select
+              [(ngModel)]="subcategoriaId"
+              [options]="subcategoriasFiltradas"
+              optionLabel="nombre"
+              optionValue="id"
+              placeholder="Seleccionar subcategoría"
+              [showClear]="true"
+              styleClass="w-full">
+            </p-select>
+          </div>
         </div>
 
         <!-- Actividad -->
@@ -116,8 +156,8 @@
           <p-select
             [(ngModel)]="actividadId"
             [options]="actividadesDisponibles"
-            optionLabel="actividades_titulo"
-            optionValue="actividades_id"
+            optionLabel="nombre"
+            optionValue="id"
             placeholder="Seleccionar actividad"
             [showClear]="true"
             styleClass="w-full">
@@ -127,23 +167,60 @@
           </p>
         </div>
 
-        <!-- Usuario asignado -->
-        <div>
-          <label class="text-sm font-medium text-gray-700 mb-2 block">
-            Asignar a
-          </label>
-          <p-select
-            [(ngModel)]="usuarioId"
-            [options]="usuariosDisponibles"
-            optionLabel="usuarios_login_hash"
-            optionValue="usuarios_id"
-            placeholder="Seleccionar usuario"
-            [showClear]="true"
-            styleClass="w-full">
-          </p-select>
-          <p class="text-xs text-gray-500 mt-1">
-            Deja vacío para que quede sin asignar
-          </p>
+        <!-- Asignar por (Usuario o Cargo) en grid de 2 columnas -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <!-- Tipo de asignación -->
+          <div>
+            <label class="text-sm font-medium text-gray-700 mb-2 block">
+              Asignar por
+            </label>
+            <p-select
+              [(ngModel)]="tipoAsignacion"
+              [options]="tiposAsignacion"
+              optionLabel="label"
+              optionValue="value"
+              placeholder="Seleccionar tipo"
+              [showClear]="true"
+              styleClass="w-full"
+              (onChange)="onTipoAsignacionChange()">
+            </p-select>
+          </div>
+
+          <!-- Select de Usuario (solo aparece si tipoAsignacion === 'usuario') -->
+          <div *ngIf="tipoAsignacion === 'usuario'">
+            <label class="text-sm font-medium text-gray-700 mb-2 block">
+              <i class="pi pi-user text-blue-500 mr-1"></i> Usuario
+            </label>
+            <p-select
+              [(ngModel)]="usuarioId"
+              [options]="usuariosDisponibles"
+              optionLabel="nombre_completo"
+              optionValue="id"
+              placeholder="Seleccionar usuario"
+              [showClear]="true"
+              [filter]="true"
+              filterPlaceholder="Buscar..."
+              styleClass="w-full">
+            </p-select>
+          </div>
+
+          <!-- Select de Cargo (solo aparece si tipoAsignacion === 'cargo') -->
+          <div *ngIf="tipoAsignacion === 'cargo'">
+            <label class="text-sm font-medium text-gray-700 mb-2 block">
+              <i class="pi pi-briefcase text-green-500 mr-1"></i> Cargo
+            </label>
+            <p-select
+              [(ngModel)]="cargoId"
+              [options]="cargosDisponibles"
+              optionLabel="nombre"
+              optionValue="id"
+              placeholder="Seleccionar cargo"
+              [showClear]="true"
+              [filter]="true"
+              filterPlaceholder="Buscar..."
+              styleClass="w-full">
+            </p-select>
+          </div>
         </div>
 
       </div>

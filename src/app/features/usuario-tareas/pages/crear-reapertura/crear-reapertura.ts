@@ -1,9 +1,9 @@
 import { Component, OnInit } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { Location } from '@angular/common';
-import { TareasService } from '../../services/tareas.service';
-import { Tarea } from '../../models/tarea.model';
-import { TareasService as TareasApiService, ReabrirTareaRequest } from '../../../../core/services/tareas.service';
+import { TareasService, ReabrirTareaRequest } from '../../../../core/services/tareas.service';
+import { TareaUI, tareaAUI } from '../../../../core/interfaces/tarea.interface';
+import { isSuccess } from '../../../../core/interfaces/api-response.interface';
 import { MessageService } from 'primeng/api';
 
 @Component({
@@ -13,7 +13,7 @@ import { MessageService } from 'primeng/api';
   styleUrl: './crear-reapertura.scss',
 })
 export class CrearReapertura implements OnInit {
-  tarea: Tarea | null = null;
+  tarea: TareaUI | null = null;
   tareaId: string = '';
   motivoReapertura: string = '';
   observaciones: string = '';
@@ -41,7 +41,6 @@ export class CrearReapertura implements OnInit {
     private router: Router,
     private location: Location,
     private tareasService: TareasService,
-    private tareasApiService: TareasApiService,
     private messageService: MessageService
   ) { }
 
@@ -55,29 +54,11 @@ export class CrearReapertura implements OnInit {
 
   cargarTarea(id: string): void {
     this.isLoading = true;
-    this.tareasApiService.getTareaPorId(Number(id)).subscribe({
+    this.tareasService.obtenerPorId(Number(id)).subscribe({
       next: (response) => {
-        if (response.tipo === 1 && response.data.tarea) {
-          const tb = response.data.tarea;
-          // Convertir al formato del frontend
-          this.tarea = {
-            id: tb.tareas_id.toString(),
-            titulo: tb.tareas_titulo,
-            descripcion: tb.tareas_descripcion || '',
-            completada: tb.tareas_estado === 'COMPLETADA',
-            estado: this.mapearEstado(tb.tareas_estado),
-            estadodetarea: 'Activo',
-            progreso: 100,
-            Prioridad: this.mapearPrioridad(tb.tareas_prioridad),
-            Categoria: tb.categoria_nombre || 'Sin categoría',
-            fechaAsignacion: tb.tareas_fecha_programada,
-            fechaAsignacionTimestamp: new Date(tb.tareas_fecha_programada).getTime(),
-            fechaVencimiento: tb.tareas_fecha_programada,
-            horainicio: '',
-            horafin: '',
-            totalSubtareas: 0,
-            subtareasCompletadas: 0
-          };
+        if (isSuccess(response) && response.data) {
+          // Convertir al formato del frontend usando tareaAUI
+          this.tarea = tareaAUI(response.data);
           this.prioridadNueva = this.tarea.Prioridad || 'Media';
         }
         this.isLoading = false;
@@ -93,24 +74,6 @@ export class CrearReapertura implements OnInit {
         this.goBack();
       }
     });
-  }
-
-  private mapearEstado(estadoBackend: string): 'Pendiente' | 'En progreso' | 'Completada' | 'Cerrada' | 'Activo' | 'Inactiva' {
-    switch (estadoBackend) {
-      case 'PENDIENTE': return 'Pendiente';
-      case 'EN_PROGRESO': return 'En progreso';
-      case 'COMPLETADA': return 'Completada';
-      default: return 'Pendiente';
-    }
-  }
-
-  private mapearPrioridad(prioridadBackend: string): 'Alta' | 'Media' | 'Baja' {
-    switch (prioridadBackend) {
-      case 'ALTA': return 'Alta';
-      case 'MEDIA': return 'Media';
-      case 'BAJA': return 'Baja';
-      default: return 'Media';
-    }
   }
 
   goBack() {
@@ -174,9 +137,9 @@ export class CrearReapertura implements OnInit {
       fecha_vencimiento_nueva: fechaVencimientoStr
     };
 
-    this.tareasApiService.reabrirTarea(Number(this.tareaId), request).subscribe({
+    this.tareasService.reabrirTarea(Number(this.tareaId), request).subscribe({
       next: (response) => {
-        if (response.tipo === 1) {
+        if (isSuccess(response)) {
           this.messageService.add({
             severity: 'success',
             summary: 'Tarea reabierta',
